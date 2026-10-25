@@ -1,0 +1,114 @@
+MOINHO RAIOS · CONTROLE DE FARINHA - versão local 1.9.0
+=========================================
+
+O sistema roda em um computador da loja (o "servidor"). Os outros
+computadores e celulares acessam pelo navegador, no mesmo Wi-Fi.
+
+
+1. INSTALAR (uma vez só)
+------------------------
+1. Instale o Node.js, versão LTS: https://nodejs.org
+   (avançar, avançar, concluir; não precisa marcar nada a mais)
+2. Descompacte esta pasta onde quiser, por exemplo C:\ControleFarinha
+
+
+2. ABRIR O SISTEMA
+------------------
+- Windows: dois cliques em  iniciar.bat
+- Linux/Mac: no terminal, rode  ./iniciar.sh
+
+Abre uma janela preta (o servidor) e o navegador já entra no sistema.
+DEIXE A JANELA PRETA ABERTA enquanto usar. Fechou, o sistema para.
+
+Primeiro acesso:  usuário  admin   senha  admin
+O sistema pede para trocar a senha logo em seguida.
+
+
+3. ACESSAR PELO CELULAR
+-----------------------
+A janela preta mostra um endereço assim:
+    Celular (mesmo Wi-Fi):  http://192.168.0.15:3000
+Digite esse endereço no navegador do celular (conectado no mesmo Wi-Fi).
+Dica: no celular, use "Adicionar à tela de início" para ficar como app.
+
+O CELULAR NÃO ABRE? Confira nesta ordem:
+  1. Dê dois cliques em  liberar-firewall.bat  e clique "Sim".
+     (O Firewall do Windows costuma bloquear: é o motivo mais comum.)
+  2. O celular precisa estar no MESMO Wi-Fi do computador (não no 4G,
+     nem em rede de visitante).
+  3. Digite com  http://  (não https) e com  :3000  no final.
+  4. Se aparecer mais de um endereço, teste o "Outro endereço".
+  5. Teste primeiro no próprio computador: http://localhost:3000
+
+
+3B. ACESSAR DE FORA DA LOJA (PELA INTERNET)
+-------------------------------------------
+Para testar ou usar de qualquer lugar, sem mexer no roteador:
+  1. Abra o sistema normalmente (iniciar.bat).
+  2. Dê dois cliques em  tunel.bat
+     Na primeira vez ele instala o programa "cloudflared" da Cloudflare;
+     depois feche e abra o tunel.bat de novo.
+  3. Aparece um endereço  https://algumas-palavras.trycloudflare.com
+     Abra esse endereço em qualquer celular ou computador.
+Deixe as DUAS janelas abertas. Fechou o tunel.bat, o acesso externo para.
+
+Importante:
+- Esse endereço MUDA toda vez que o tunel.bat é aberto (bom para teste).
+  Para um endereço fixo, é preciso um domínio próprio na Cloudflare;
+  fale com o suporte.
+- Antes de abrir para a internet, troque a senha do admin e use senhas
+  fortes. O sistema bloqueia por 15 minutos depois de 8 senhas erradas.
+
+
+4. USUÁRIOS E ACESSOS
+---------------------
+Entre como administrador e abra a aba "Usuários".
+- Administrador: faz tudo e cria usuários
+- Operador:      lança estoque, entradas, saídas e contas
+- Acompanhante:  vê tudo e usa as Mensagens, mas não altera nada
+- Só mensagens:  não vê o sistema (estoque, contas); só usa as Mensagens
+
+
+MENSAGENS
+- "Geral": todos os usuários veem.
+- Clicando no nome de uma pessoa: conversa privada, só os dois veem
+  (nem o administrador enxerga).
+- As mensagens são temporárias: somem sozinhas 24 horas depois de
+  enviadas.
+- Notificações: na aba Mensagens, clique em "Ativar notificações" e
+  permita no navegador. Funciona no próprio computador do sistema
+  (localhost) e pelo endereço https do túnel. Pelo endereço do Wi-Fi
+  (http://192.168...) o navegador não permite notificações; nesse caso
+  ficam o som e o contador. Com o sistema totalmente fechado não chega
+  aviso: deixe a aba aberta (pode ficar minimizada).
+
+
+5. ONDE FICAM OS DADOS (IMPORTANTE)
+-----------------------------------
+- Tudo fica em:  dados\banco.json
+- Todo dia é feita uma cópia automática em  dados\backups\
+  (guarda os últimos 60 dias)
+- Faça também uma cópia da pasta "dados" para um pendrive ou nuvem
+  de vez em quando.
+- Para restaurar um backup: feche o sistema, copie o arquivo do dia
+  desejado de dados\backups\ por cima de dados\banco.json e abra de novo.
+
+
+6. ATUALIZAR PARA UMA VERSÃO NOVA
+---------------------------------
+1. Feche a janela preta.
+2. Substitua os arquivos  server.js  e a pasta  public  pelos novos.
+   NUNCA apague a pasta "dados".
+3. Abra o iniciar.bat de novo.
+Quem estiver com o sistema aberto vê o aviso "Nova versão disponível"
+e clica em "Atualizar agora".
+
+
+7. PROBLEMAS COMUNS
+-------------------
+- "A porta 3000 já está em uso": o sistema já está aberto em outra
+  janela. Feche a outra ou use a que está aberta.
+- Esqueci a senha do admin: outro administrador pode redefinir na aba
+  Usuários. Se não houver outro, fale com o suporte.
+- As fontes do sistema precisam de internet para aparecer iguais ao
+  modelo. Sem internet o sistema funciona normal, só com a fonte padrão.
