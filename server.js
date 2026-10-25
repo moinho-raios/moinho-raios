@@ -1,6 +1,7 @@
-// Controle de Farinha — servidor local
-// Não precisa instalar pacotes: só o Node.js (versão 18 ou mais nova).
+// Moinho Raios · Controle de Farinha — servidor
+// No computador da loja não precisa instalar pacotes: só o Node.js (versão 18 ou mais nova).
 // Para iniciar:  node server.js     (ou dê dois cliques em iniciar.bat no Windows)
+// Na internet (Render): defina DATABASE_URL (Postgres/Neon) e SENHA_ADMIN_INICIAL.
 
 "use strict";
 const http = require("http");
@@ -9,7 +10,7 @@ const path = require("path");
 const crypto = require("crypto");
 const os = require("os");
 
-const VERSAO = "1.9.0";
+const VERSAO = "1.10.1";
 const PORTA = Number(process.env.PORTA || process.env.PORT || 3000);
 const PASTA_DADOS = path.join(__dirname, "dados");
 const ARQ_BANCO = path.join(PASTA_DADOS, "banco.json");
@@ -24,23 +25,16 @@ const PAPEIS = ["admin", "operador", "acompanhante", "mensagens"];
 // Quem pode lançar dados de estoque e financeiro
 const PODE_LANCAR = ["admin", "operador"];
 
-/* ---------------- banco de dados (arquivo JSON) ---------------- */
-fs.mkdirSync(PASTA_BACKUP, { recursive: true });
+/* ---------------- banco de dados ----------------
+   No computador da loja: arquivo dados/banco.json (sem instalar nada).
+   Na internet (Render): se existir a variável DATABASE_URL, os dados ficam no Postgres (Neon). */
+const NUVEM = !!process.env.DATABASE_URL;
+let pool = null;
 
 function bancoVazio() {
   return { rev: 1, produtos: {}, movimentos: {}, contas: {}, mensagens: {}, usuarios: {}, sessoes: {} };
 }
 let banco;
-try {
-  banco = JSON.parse(fs.readFileSync(ARQ_BANCO, "utf8"));
-  for (const k of Object.keys(bancoVazio())) if (banco[k] === undefined) banco[k] = bancoVazio()[k];
-} catch (e) {
-  if (fs.existsSync(ARQ_BANCO)) {
-    console.error("\n[ERRO] O arquivo dados/banco.json está corrompido. Restaure um backup da pasta dados/backups.\n");
-    process.exit(1);
-  }
-  banco = bancoVazio();
-}
 
 function hashSenha(senha, salt) {
   return crypto.scryptSync(String(senha), salt, 64).toString("hex");
@@ -48,41 +42,67 @@ function hashSenha(senha, salt) {
 function novoId() {
   return Date.now().toString(36) + crypto.randomBytes(5).toString("hex");
 }
+function hojeISO() { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); }
 
-// Primeiro uso: cria o administrador padrão
-if (!Object.keys(banco.usuarios).length) {
-  const id = novoId(), salt = crypto.randomBytes(16).toString("hex");
-  banco.usuarios[id] = { id, usuario: "admin", nome: "Administrador", papel: "admin", salt, hash: hashSenha("admin", salt), trocarSenha: true, criadoEm: Date.now() };
+async function carregar() {
+  if (NUVEM) {
+    const { Pool } = require("pg");
+    const u = new URL(process.env.DATABASE_URL);
+    u.searchParams.delete("sslmode"); u.searchParams.delete("channel_binding");
+    pool = new Pool({ connectionString: u.toString(), ssl: process.env.PGSSL === "off" ? false : { rejectUnauthorized: true }, max: 3 });
+    await pool.query("create table if not exists moinho_estado (id text primary key, dados jsonb not null, atualizado timestamptz not null default now())");
+    await pool.query("create table if not exists moinho_backups (dia text primary key, dados jsonb not null)");
+    const r = await pool.query("select dados from moinho_estado where id = 'banco'");
+    return r.rows[0] ? r.rows[0].dados : null;
+  }
+  fs.mkdirSync(PASTA_BACKUP, { recursive: true });
+  try { return JSON.parse(fs.readFileSync(ARQ_BANCO, "utf8")); }
+  catch (e) {
+    if (fs.existsSync(ARQ_BANCO)) {
+      console.error("\n[ERRO] O arquivo dados/banco.json está corrompido. Restaure um backup da pasta dados/backups.\n");
+      process.exit(1);
+    }
+    return null;
+  }
 }
 
-let salvando = false, pendente = false;
+// Grava o banco inteiro; se chegar outra alteração no meio da gravação, grava de novo no fim.
+let salvando = false, pendente = false, ultimoBackup = "";
 function salvar() {
   banco.rev++;
   if (salvando) { pendente = true; return; }
   salvando = true;
-  const tmp = ARQ_BANCO + ".tmp";
-  fs.writeFile(tmp, JSON.stringify(banco), err => {
-    if (!err) {
-      try { fs.renameSync(tmp, ARQ_BANCO); } catch (e) { console.error("Falha ao gravar banco:", e.message); }
-    } else console.error("Falha ao gravar banco:", err.message);
-    salvando = false;
-    backupDiario();
-    if (pendente) { pendente = false; banco.rev--; salvar(); }
-  });
+  gravar().catch(e => { console.error("Falha ao gravar dados:", e.message); pendente = true; return new Promise(r => setTimeout(r, 3000)); })
+    .finally(() => { salvando = false; if (pendente) { pendente = false; banco.rev--; salvar(); } });
 }
-function backupDiario() {
-  try {
-    const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-    const arq = path.join(PASTA_BACKUP, "banco-" + d.toISOString().slice(0, 10) + ".json");
-    if (fs.existsSync(ARQ_BANCO) && !fs.existsSync(arq)) {
-      // backup sem mensagens (são temporárias) e sem sessões de login
-      fs.writeFileSync(arq, JSON.stringify({ ...banco, mensagens: {}, sessoes: {} }));
+async function gravar() {
+  const json = JSON.stringify(banco);
+  // backup diário sem mensagens (são temporárias) e sem sessões de login
+  const dia = hojeISO(), copia = dia !== ultimoBackup ? JSON.stringify({ ...banco, mensagens: {}, sessoes: {} }) : null;
+  if (NUVEM) {
+    await pool.query("insert into moinho_estado (id, dados) values ('banco', $1::jsonb) on conflict (id) do update set dados = excluded.dados, atualizado = now()", [json]);
+    if (copia) {
+      await pool.query("insert into moinho_backups (dia, dados) values ($1, $2::jsonb) on conflict (dia) do nothing", [dia, copia]);
+      await pool.query("delete from moinho_backups where dia not in (select dia from moinho_backups order by dia desc limit 60)");
+      ultimoBackup = dia;
+    }
+    return;
+  }
+  const tmp = ARQ_BANCO + ".tmp";
+  await fs.promises.writeFile(tmp, json);
+  await fs.promises.rename(tmp, ARQ_BANCO);
+  if (copia) {
+    const arq = path.join(PASTA_BACKUP, "banco-" + dia + ".json");
+    if (!fs.existsSync(arq)) {
+      fs.writeFileSync(arq, copia);
       const todos = fs.readdirSync(PASTA_BACKUP).filter(f => f.startsWith("banco-")).sort();
       todos.slice(0, Math.max(0, todos.length - 60)).forEach(f => fs.unlinkSync(path.join(PASTA_BACKUP, f)));
     }
-  } catch (e) { console.error("Falha no backup:", e.message); }
+    ultimoBackup = dia;
+  }
 }
-salvar();
+// Espera a última gravação terminar (usado ao desligar o servidor)
+async function terminarGravacao() { for (let i = 0; i < 50 && (salvando || pendente); i++) await new Promise(r => setTimeout(r, 100)); }
 
 /* ---------------- utilidades HTTP ---------------- */
 function responder(res, status, obj) {
@@ -119,8 +139,6 @@ function limparMensagensVencidas() {
   for (const [id, m] of Object.entries(banco.mensagens)) if ((m.criadoEm || 0) < limite) { delete banco.mensagens[id]; apagou = true; }
   if (apagou) salvar();
 }
-limparMensagensVencidas();
-setInterval(limparMensagensVencidas, 60 * 1000);
 function listaMensagens(eu) {
   const limite = Date.now() - VALIDADE_MSG;
   const todas = Object.values(banco.mensagens).filter(m => (m.criadoEm || 0) >= limite).sort((a, b) => (b.criadoEm || 0) - (a.criadoEm || 0));
@@ -140,7 +158,7 @@ async function api(req, res, url) {
 
   if (p === "/api/login" && metodo === "POST") {
     const b = await lerCorpo(req);
-    const origem = String(req.headers["cf-connecting-ip"] || req.socket.remoteAddress || "");
+    const origem = String(req.headers["cf-connecting-ip"] || (NUVEM && String(req.headers["x-forwarded-for"] || "").split(",")[0].trim()) || req.socket.remoteAddress || "");
     const chave = origem + "|" + String(b.usuario || "").trim().toLowerCase();
     const t = tentativas.get(chave);
     if (t && t.n >= 8 && Date.now() - t.desde < 15 * 60 * 1000)
@@ -286,14 +304,18 @@ const servidor = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://localhost");
   try {
     if (url.pathname.startsWith("/api/")) return await api(req, res, url);
-    const ESTATICOS = { "/icone.svg": "image/svg+xml", "/icone-180.png": "image/png", "/icone-512.png": "image/png", "/manifest.json": "application/manifest+json", "/sw.js": "application/javascript; charset=utf-8" };
-    if (req.method === "GET" && ESTATICOS[url.pathname]) {
-      res.writeHead(200, { "Content-Type": ESTATICOS[url.pathname], "Cache-Control": url.pathname === "/sw.js" ? "no-cache" : "max-age=3600" });
-      return fs.createReadStream(path.join(__dirname, "public", url.pathname.slice(1))).pipe(res);
-    }
-    if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
-      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache" });
-      return fs.createReadStream(PAGINA).pipe(res);
+    const ESTATICOS = { "/index.html": "text/html; charset=utf-8", "/icone.svg": "image/svg+xml", "/icone-180.png": "image/png", "/icone-512.png": "image/png", "/manifest.json": "application/manifest+json", "/sw.js": "application/javascript; charset=utf-8" };
+    const rota = url.pathname === "/" ? "/index.html" : url.pathname;
+    if (req.method === "GET" && ESTATICOS[rota]) {
+      // procura em public/ e, se não achar, na pasta principal (caso os arquivos tenham sido enviados soltos)
+      const nome = rota.slice(1);
+      const arq = [path.join(__dirname, "public", nome), path.join(__dirname, nome)].find(f => fs.existsSync(f));
+      if (!arq) { res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }); return res.end("Arquivo " + nome + " não encontrado no servidor. Envie a pasta public."); }
+      const cache = rota === "/index.html" || rota === "/sw.js" ? "no-cache" : "max-age=3600";
+      res.writeHead(200, { "Content-Type": ESTATICOS[rota], "Cache-Control": cache });
+      const fluxo = fs.createReadStream(arq);
+      fluxo.on("error", () => res.end());
+      return fluxo.pipe(res);
     }
     res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }); res.end("Página não encontrada");
   } catch (e) {
@@ -308,7 +330,34 @@ servidor.on("error", e => {
   process.exit(1);
 });
 
-servidor.listen(PORTA, "0.0.0.0", () => {
+async function iniciar() {
+  try { banco = await carregar(); }
+  catch (e) {
+    console.error("\n[ERRO] Não foi possível abrir o banco de dados: " + e.message);
+    console.error("Confira a variável DATABASE_URL (endereço do Neon).\n");
+    process.exit(1);
+  }
+  if (!banco) banco = bancoVazio();
+  for (const k of Object.keys(bancoVazio())) if (banco[k] === undefined) banco[k] = bancoVazio()[k];
+  // Primeiro uso: cria o administrador. Na internet, use a variável SENHA_ADMIN_INICIAL.
+  if (!Object.keys(banco.usuarios).length) {
+    const id = novoId(), salt = crypto.randomBytes(16).toString("hex");
+    banco.usuarios[id] = { id, usuario: "admin", nome: "Administrador", papel: "admin", salt, hash: hashSenha(process.env.SENHA_ADMIN_INICIAL || "admin", salt), trocarSenha: true, criadoEm: Date.now() };
+  }
+  limparMensagensVencidas();
+  setInterval(limparMensagensVencidas, 60 * 1000);
+  salvar();
+  servidor.listen(PORTA, "0.0.0.0", aoIniciar);
+}
+// Ao desligar (o Render faz isso a cada atualização), termina de gravar antes de sair
+for (const sinal of ["SIGTERM", "SIGINT"]) process.on(sinal, async () => {
+  servidor.close(); await terminarGravacao(); if (pool) await pool.end().catch(() => {}); process.exit(0);
+});
+function aoIniciar() {
+  if (NUVEM) {
+    console.log("Moinho Raios · Controle de Farinha · versão " + VERSAO + " · na internet, dados no Postgres · porta " + PORTA);
+    return;
+  }
   const VIRTUAL = /vethernet|virtualbox|vmware|hyper-v|wsl|docker|loopback|vbox|tailscale|zerotier|bluetooth|vpn|tap|tun/i;
   const ips = [];
   for (const [nome, lista] of Object.entries(os.networkInterfaces()))
@@ -326,4 +375,5 @@ servidor.listen(PORTA, "0.0.0.0", () => {
   if (Object.values(banco.usuarios).some(u => u.usuario === "admin" && u.trocarSenha))
     console.log("  Primeiro acesso: usuário admin / senha admin (o sistema pede para trocar)");
   console.log("\n  Deixe esta janela aberta enquanto usar o sistema.\n");
-});
+}
+iniciar();
