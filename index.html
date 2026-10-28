@@ -535,6 +535,20 @@ nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:v
         <button class="btn quiet" id="btnSenha" type="button">Trocar senha</button>
       </div>
     </div>
+    <div class="panel" id="painelZerar" hidden>
+      <h2>Zerar dados</h2>
+      <p class="hint">Apaga os dados escolhidos para começar do zero. <b>Usuários e senhas são mantidos.</b> Antes de apagar, o sistema guarda uma cópia de segurança automática.</p>
+      <form id="zForm" autocomplete="off" class="atuform">
+        <label class="check"><input type="checkbox" id="zMov" value="movimentos"> Entradas e saídas (movimentações) <span class="hint" id="zMovN"></span></label>
+        <label class="check"><input type="checkbox" id="zCon" value="contas"> Contas a pagar e a receber <span class="hint" id="zConN"></span></label>
+        <label class="check"><input type="checkbox" id="zPro" value="produtos"> Farinhas cadastradas <span class="hint" id="zProN"></span></label>
+        <label class="check"><input type="checkbox" id="zMsg" value="mensagens"> Mensagens do chat <span class="hint" id="zMsgN"></span></label>
+        <label>Para confirmar, digite ZERAR<input id="zConf" placeholder="ZERAR" autocapitalize="characters" style="max-width:220px"></label>
+        <p class="err" id="zErr" hidden></p>
+        <div class="row"><button class="btn danger" type="submit" id="zBtn" disabled>Apagar os dados marcados</button></div>
+      </form>
+      <div class="banner" id="zOk" hidden></div>
+    </div>
     <div class="panel" id="painelAtualizacao" hidden>
       <h2>Atualizar sistema</h2>
       <p class="hint" id="atuStatus">Verificando…</p>
@@ -1011,8 +1025,9 @@ function renderRelatorios(){
 $("#tabs").addEventListener("click",()=>{if(S.tab==="relatorios")renderRelatorios();});
 
 /* ---------- versões do sistema ---------- */
-const VERSAO="1.13.0";
+const VERSAO="1.14.0";
 const HISTORICO=[
+  {v:"1.14.0",d:"2026-10-28",n:["Zerar dados em Configurações (administrador): escolha o que apagar, confirme digitando ZERAR. Usuários são mantidos e uma cópia de segurança é guardada antes."]},
   {v:"1.13.0",d:"2026-10-28",n:["Nova aba Relatórios: resumo do período, gráfico de entradas e saídas, vendas e lucro por farinha, financeiro e maiores clientes e fornecedores.","Períodos: este mês, mês passado, últimos 30 dias, este ano ou datas escolhidas."]},
   {v:"1.12.2",d:"2026-10-28",n:["O botão Atualizar sistema também manda o Render publicar (Deploy Hook), sem precisar abrir o Render."]},
   {v:"1.12.1",d:"2026-10-28",n:["Acompanhante agora vê só o chat (Mensagens e Configurações), sem estoque nem contas.","O antigo tipo Só mensagens foi unido ao Acompanhante."]},
@@ -1115,6 +1130,7 @@ function render(){
   labelCells();
   const hasEx=S.produtos.some(x=>x.exemplo)||S.movimentos.some(x=>x.exemplo)||S.contas.some(x=>x.exemplo);$("#exBanner").hidden=!hasEx;
   if(typeof renderRelatorios==="function")renderRelatorios();
+  if(typeof zContar==="function"&&EU&&EU.papel==="admin")zContar();
 }
 
 /* ---------- início ---------- */
@@ -1136,6 +1152,24 @@ async function salvarTema(t){aplicarTema(t.skin,t.modo);if(!TOKEN)return;
 $("#skins").addEventListener("click",e=>{const b=e.target.closest(".skin");if(!b)return;salvarTema({...temaAtual(),skin:b.dataset.skin});toast("Skin "+b.querySelector(".sk-nome").textContent+" aplicada");});
 $("#modo").addEventListener("click",e=>{const b=e.target.closest("button[data-modo]");if(b)salvarTema({...temaAtual(),modo:b.dataset.modo});});
 try{const t=JSON.parse(localStorage.getItem("farinha.tema")||"{}");aplicarTema(t.skin,t.modo);}catch(e){aplicarTema();}
+
+/* ---------- zerar dados (administrador) ---------- */
+const zChecks=["#zMov","#zCon","#zPro","#zMsg"];
+function zContar(){const n=(c,t1,t2)=>"("+c+" "+(c===1?t1:t2)+")";
+  $("#zMovN").textContent=n(S.movimentos.length,"lançamento","lançamentos");$("#zConN").textContent=n(S.contas.length,"conta","contas");
+  $("#zProN").textContent=n(S.produtos.length,"farinha","farinhas");$("#zMsgN").textContent=n(msgs.length,"mensagem","mensagens");}
+function zValidar(){if($("#zPro").checked&&!$("#zMov").checked)$("#zMov").checked=true;
+  const algum=zChecks.some(c=>$(c).checked);$("#zBtn").disabled=!(algum&&$("#zConf").value.trim().toUpperCase()==="ZERAR");$("#zErr").hidden=true;}
+zChecks.forEach(c=>$(c).addEventListener("change",()=>{if(c==="#zMov"&&!$("#zMov").checked)$("#zPro").checked=false;zValidar();}));
+$("#zConf").addEventListener("input",zValidar);
+$("#zForm").addEventListener("submit",async e=>{e.preventDefault();const er=$("#zErr"),b=$("#zBtn");er.hidden=true;b.disabled=true;b.textContent="Apagando…";
+  const itens=zChecks.filter(c=>$(c).checked).map(c=>$(c).value);
+  try{const j=await req("POST","/api/zerar",{itens,confirmacao:$("#zConf").value});
+    const nomes={movimentos:"movimentações",contas:"contas",produtos:"farinhas",mensagens:"mensagens"};
+    const ok=$("#zOk");ok.hidden=false;ok.textContent="Pronto. Apagado: "+Object.entries(j.apagados).map(([k,v])=>v+" "+nomes[k]).join(", ")+". Cópia de segurança guardada como "+j.copia+".";
+    $("#zForm").reset();zValidar();await sincronizar(true);}
+  catch(x){er.textContent=x.msg||"Não foi possível apagar.";er.hidden=false;}
+  b.textContent="Apagar os dados marcados";zValidar();});
 
 /* ---------- atualizar sistema pela tela (administrador) ---------- */
 let atuInfo=null,atuArquivos=[];
@@ -1178,7 +1212,7 @@ function entrar(u){EU=u;meuId=u.id;store=api;$("#loginTela").hidden=true;
   if(u.trocarSenha)abrirSenha(true);
   rev=0;sincronizar(true);clearInterval(poll);let ultimaSync=0;poll=setInterval(()=>{if(!document.hidden||Date.now()-ultimaSync>9000){ultimaSync=Date.now();sincronizar();}},3000);
   if(location.hash==="#chat")setTab("chat");renderNotif();
-  if(u.papel==="admin")carregarUsuarios();carregarAtualizacao();}
+  if(u.papel==="admin")carregarUsuarios();carregarAtualizacao();$("#painelZerar").hidden=u.papel!=="admin";}
 function sair(expirado){document.body.classList.remove("so-chat");vistosIds=new Set();vistosInit=false;document.title=TITULO_BASE;clearInterval(poll);poll=null;TOKEN=null;EU=null;meuId=null;store=null;rev=0;
   try{localStorage.removeItem("farinha.token");}catch(e){}
   S.produtos=[];S.movimentos=[];S.contas=[];msgs=[];pessoas=[];render();renderChat();

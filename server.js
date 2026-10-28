@@ -10,7 +10,7 @@ const path = require("path");
 const crypto = require("crypto");
 const os = require("os");
 
-const VERSAO = "1.13.0";
+const VERSAO = "1.14.0";
 const PORTA = Number(process.env.PORTA || process.env.PORT || 3000);
 const PASTA_DADOS = path.join(__dirname, "dados");
 const ARQ_BANCO = path.join(PASTA_DADOS, "banco.json");
@@ -86,7 +86,7 @@ async function gravar() {
     await pool.query("insert into moinho_estado (id, dados) values ('banco', $1::jsonb) on conflict (id) do update set dados = excluded.dados, atualizado = now()", [json]);
     if (copia) {
       await pool.query("insert into moinho_backups (dia, dados) values ($1, $2::jsonb) on conflict (dia) do nothing", [dia, copia]);
-      await pool.query("delete from moinho_backups where dia not in (select dia from moinho_backups order by dia desc limit 60)");
+      await pool.query("delete from moinho_backups where dia not like 'antes-de-zerar-%' and dia not in (select dia from moinho_backups where dia not like 'antes-de-zerar-%' order by dia desc limit 60)");
       ultimoBackup = dia;
     }
     return;
@@ -305,6 +305,29 @@ async function api(req, res, url) {
       mensagens: listaMensagens(eu),
       pessoas: Object.values(banco.usuarios).map(u => ({ id: u.id, nome: u.nome, papel: u.papel }))
     });
+  }
+
+  /* --- zerar dados (só administrador; guarda cópia antes) --- */
+  if (p === "/api/zerar" && metodo === "POST") {
+    if (eu.papel !== "admin") return erro(res, 403, "Só o administrador pode zerar os dados.");
+    const b = await lerCorpo(req);
+    if (String(b.confirmacao || "").trim().toUpperCase() !== "ZERAR") return erro(res, 400, "Digite ZERAR para confirmar.");
+    const itens = Array.isArray(b.itens) ? b.itens.filter(i => ["movimentos", "contas", "produtos", "mensagens"].includes(i)) : [];
+    if (!itens.length) return erro(res, 400, "Marque o que deseja apagar.");
+    if (itens.includes("produtos") && !itens.includes("movimentos")) return erro(res, 400, "Para apagar as farinhas, marque também as movimentações.");
+    // cópia de segurança de tudo antes de apagar (sem sessões de login)
+    const quando = new Date(); quando.setMinutes(quando.getMinutes() - quando.getTimezoneOffset());
+    const marca = "antes-de-zerar-" + quando.toISOString().slice(0, 19).replace(/[:T]/g, "-");
+    const copia = JSON.stringify({ ...banco, sessoes: {} });
+    try {
+      if (NUVEM) await pool.query("insert into moinho_backups (dia, dados) values ($1, $2::jsonb) on conflict (dia) do nothing", [marca, copia]);
+      else { fs.mkdirSync(PASTA_BACKUP, { recursive: true }); fs.writeFileSync(path.join(PASTA_BACKUP, marca + ".json"), copia); }
+    } catch (e) { return erro(res, 500, "Não foi possível guardar a cópia de segurança. Nada foi apagado."); }
+    const apagados = {};
+    for (const i of itens) { apagados[i] = Object.keys(banco[i]).length; banco[i] = {}; }
+    salvar();
+    console.log("Dados zerados por " + eu.nome + ": " + JSON.stringify(apagados) + " · cópia: " + marca);
+    return responder(res, 200, { ok: true, apagados, copia: marca });
   }
 
   /* --- atualização do sistema (só administrador) --- */
