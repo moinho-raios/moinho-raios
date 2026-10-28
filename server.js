@@ -10,7 +10,7 @@ const path = require("path");
 const crypto = require("crypto");
 const os = require("os");
 
-const VERSAO = "1.10.1";
+const VERSAO = "1.12.0";
 const PORTA = Number(process.env.PORTA || process.env.PORT || 3000);
 const PASTA_DADOS = path.join(__dirname, "dados");
 const ARQ_BANCO = path.join(PASTA_DADOS, "banco.json");
@@ -111,15 +111,15 @@ function responder(res, status, obj) {
   res.end(corpo);
 }
 function erro(res, status, msg) { responder(res, status, { erro: msg }); }
-function lerCorpo(req) {
+function lerCorpo(req, limite = 1e6) {
   return new Promise((ok, falha) => {
     let tam = 0; const partes = [];
-    req.on("data", c => { tam += c.length; if (tam > 1e6) { falha(new Error("grande")); req.destroy(); } else partes.push(c); });
+    req.on("data", c => { tam += c.length; if (tam > limite) { falha(new Error("grande")); req.destroy(); } else partes.push(c); });
     req.on("end", () => { if (!partes.length) return ok({}); try { const v = JSON.parse(Buffer.concat(partes).toString("utf8")); ok(v && typeof v === "object" && !Array.isArray(v) ? v : {}); } catch (e) { falha(e); } });
     req.on("error", falha);
   });
 }
-function publico(u) { return { id: u.id, usuario: u.usuario, nome: u.nome, papel: u.papel, trocarSenha: !!u.trocarSenha }; }
+function publico(u) { return { id: u.id, usuario: u.usuario, nome: u.nome, papel: u.papel, trocarSenha: !!u.trocarSenha, skin: u.skin || "raio", modo: u.modo || "auto" }; }
 function usuarioDaRequisicao(req) {
   const m = /^Bearer\s+(\S+)$/.exec(req.headers.authorization || "");
   if (!m) return null;
@@ -145,6 +145,90 @@ function listaMensagens(eu) {
   const geral = todas.filter(m => !m.para).slice(0, 300);
   const privadas = todas.filter(m => m.para && (m.para === eu.id || m.autor === eu.id)).slice(0, 1000);
   return geral.concat(privadas);
+}
+
+
+/* ---------------- atualização do sistema pela tela ----------------
+   Na internet: envia os arquivos para o GitHub (um único commit) e o Render publica sozinho.
+     Precisa das variáveis GITHUB_TOKEN (token com permissão "Contents: read and write")
+     e GITHUB_REPO (ex.: moinho-raios/moinho-raios). GITHUB_BRANCH é opcional (padrão: main).
+   No computador da loja: grava os arquivos na pasta, guarda os antigos e reinicia. */
+const vm = require("vm");
+const ARQUIVOS_PERMITIDOS = ["server.js", "package.json", "index.html", "sw.js", "manifest.json", "icone.svg", "icone-180.png", "icone-512.png", "LEIA-ME.txt", "PUBLICAR-NA-INTERNET.txt", "iniciar.bat", "iniciar.sh", "liberar-firewall.bat", "tunel.bat"];
+const NA_PASTA_PUBLIC = ["index.html", "sw.js", "manifest.json", "icone.svg", "icone-180.png", "icone-512.png"];
+const GH = { token: process.env.GITHUB_TOKEN || "", repo: process.env.GITHUB_REPO || "", branch: process.env.GITHUB_BRANCH || "main" };
+function modoAtualizacao() { return GH.token && GH.repo ? "github" : NUVEM ? "indisponivel" : "local"; }
+// onde o arquivo mora: se o servidor achou em public/, continua em public/; senão, na pasta principal
+function caminhoDoArquivo(nome) {
+  if (NA_PASTA_PUBLIC.includes(nome) && fs.existsSync(path.join(__dirname, "public", nome))) return "public/" + nome;
+  return nome;
+}
+function validarArquivos(lista) {
+  if (!Array.isArray(lista) || !lista.length) throw new Error("Escolha pelo menos um arquivo.");
+  if (lista.length > 20) throw new Error("No máximo 20 arquivos por vez.");
+  return lista.map(a => {
+    const nome = String(a.nome || "").replace(/^.*[\\/]/, "").replace(/\s*\(\d+\)(?=\.[^.]+$)/, "");
+    if (!ARQUIVOS_PERMITIDOS.includes(nome)) throw new Error("O arquivo \"" + a.nome + "\" não faz parte do sistema. Envie só arquivos da atualização (server.js, index.html etc.).");
+    const buf = Buffer.from(String(a.base64 || ""), "base64");
+    if (!buf.length) throw new Error("O arquivo " + nome + " está vazio.");
+    const texto = buf.toString("utf8");
+    if (nome === "server.js") {
+      try { new vm.Script(texto, { filename: "server.js" }); } catch (e) { throw new Error("O server.js enviado tem erro e foi recusado (nada foi alterado): " + e.message); }
+      if (!/const VERSAO = "/.test(texto)) throw new Error("O server.js enviado não parece ser do Moinho Raios.");
+    }
+    if (nome === "package.json") { try { JSON.parse(texto); } catch (e) { throw new Error("O package.json enviado está com erro e foi recusado."); } }
+    if (nome === "index.html" && !/Moinho Raios/.test(texto)) throw new Error("O index.html enviado não parece ser do Moinho Raios.");
+    return { nome, caminho: caminhoDoArquivo(nome), buf };
+  });
+}
+function versaoDe(arquivos) {
+  const s = arquivos.find(a => a.nome === "server.js");
+  const m = s && /const VERSAO = "([^"]+)"/.exec(s.buf.toString("utf8"));
+  return m ? m[1] : null;
+}
+async function gh(metodo, rota, corpo) {
+  let r;
+  try { r = await fetch((process.env.GITHUB_API || "https://api.github.com") + "/repos/" + GH.repo + rota, {
+    method: metodo,
+    headers: { Authorization: "Bearer " + GH.token, Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28", "User-Agent": "moinho-raios", "Content-Type": "application/json" },
+    body: corpo ? JSON.stringify(corpo) : undefined
+  }); } catch (e) { throw new Error("Não foi possível falar com o GitHub. Tente de novo em alguns minutos."); }
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const msg = r.status === 401 ? "o GITHUB_TOKEN é inválido ou venceu" : r.status === 403 ? "o GITHUB_TOKEN não tem permissão de escrita (Contents: Read and write)" : r.status === 404 ? "repositório ou branch não encontrado; confira GITHUB_REPO" : (j.message || ("erro " + r.status));
+    throw new Error("GitHub recusou: " + msg + ".");
+  }
+  return j;
+}
+async function enviarParaGitHub(arquivos, autor) {
+  const ref = await gh("GET", "/git/ref/heads/" + encodeURIComponent(GH.branch));
+  const commitAtual = await gh("GET", "/git/commits/" + ref.object.sha);
+  const itens = [];
+  for (const a of arquivos) {
+    const blob = await gh("POST", "/git/blobs", { content: a.buf.toString("base64"), encoding: "base64" });
+    itens.push({ path: a.caminho, mode: "100644", type: "blob", sha: blob.sha });
+  }
+  const arvore = await gh("POST", "/git/trees", { base_tree: commitAtual.tree.sha, tree: itens });
+  const v = versaoDe(arquivos);
+  const msg = (v ? "Versão " + v : "Atualização") + " enviada pelo sistema por " + autor + " (" + arquivos.map(a => a.nome).join(", ") + ")";
+  const novo = await gh("POST", "/git/commits", { message: msg, tree: arvore.sha, parents: [ref.object.sha] });
+  await gh("PATCH", "/git/refs/heads/" + encodeURIComponent(GH.branch), { sha: novo.sha });
+  return novo.sha.slice(0, 7);
+}
+function gravarLocal(arquivos) {
+  const pastaAntiga = path.join(PASTA_DADOS, "versoes-antigas", "v" + VERSAO + "-" + Date.now());
+  fs.mkdirSync(pastaAntiga, { recursive: true });
+  for (const a of arquivos) {
+    const destino = path.join(__dirname, a.caminho);
+    if (fs.existsSync(destino)) fs.copyFileSync(destino, path.join(pastaAntiga, a.nome));
+  }
+  for (const a of arquivos) {
+    const destino = path.join(__dirname, a.caminho);
+    fs.mkdirSync(path.dirname(destino), { recursive: true });
+    fs.writeFileSync(destino + ".novo", a.buf);
+    fs.renameSync(destino + ".novo", destino);
+  }
+  return pastaAntiga;
 }
 
 /* ---------------- rotas ---------------- */
@@ -180,6 +264,15 @@ async function api(req, res, url) {
   if (!eu) return erro(res, 401, "Faça login para continuar.");
 
   if (p === "/api/logout" && metodo === "POST") { delete banco.sessoes[eu.token]; salvar(); return responder(res, 200, { ok: true }); }
+  // preferências de aparência de cada usuário (skin e modo claro/escuro)
+  if (p === "/api/preferencias" && metodo === "POST") {
+    const b = await lerCorpo(req);
+    const u = banco.usuarios[eu.id];
+    if (b.skin !== undefined) { if (!["raio", "roda", "selo"].includes(b.skin)) return erro(res, 400, "Skin inválida."); u.skin = b.skin; }
+    if (b.modo !== undefined) { if (!["auto", "claro", "escuro"].includes(b.modo)) return erro(res, 400, "Modo inválido."); u.modo = b.modo; }
+    salvar();
+    return responder(res, 200, { usuario: publico(u) });
+  }
   if (p === "/api/eu" && metodo === "GET") return responder(res, 200, { usuario: publico(eu), versao: VERSAO });
 
   if (p === "/api/senha" && metodo === "POST") {
@@ -203,6 +296,36 @@ async function api(req, res, url) {
       mensagens: listaMensagens(eu),
       pessoas: Object.values(banco.usuarios).map(u => ({ id: u.id, nome: u.nome, papel: u.papel }))
     });
+  }
+
+  /* --- atualização do sistema (só administrador) --- */
+  if (p === "/api/atualizacao" && metodo === "GET") {
+    if (eu.papel !== "admin") return erro(res, 403, "Só o administrador atualiza o sistema.");
+    return responder(res, 200, { modo: modoAtualizacao(), repo: GH.repo, branch: GH.branch, versao: VERSAO, permitidos: ARQUIVOS_PERMITIDOS });
+  }
+  if (p === "/api/atualizacao" && metodo === "POST") {
+    if (eu.papel !== "admin") return erro(res, 403, "Só o administrador atualiza o sistema.");
+    const modo = modoAtualizacao();
+    if (modo === "indisponivel") return erro(res, 400, "Falta configurar GITHUB_TOKEN e GITHUB_REPO no Render.");
+    let arquivos;
+    try { arquivos = validarArquivos((await lerCorpo(req, 8e6)).arquivos); } catch (e) { return erro(res, 400, e.message); }
+    const novaVersao = versaoDe(arquivos);
+    try {
+      if (modo === "github") {
+        const commit = await enviarParaGitHub(arquivos, eu.nome);
+        console.log("Atualização enviada ao GitHub por " + eu.nome + ": " + commit);
+        return responder(res, 200, { ok: true, modo, commit, versao: novaVersao, arquivos: arquivos.map(a => a.caminho) });
+      }
+      const pasta = gravarLocal(arquivos);
+      console.log("\n  Atualização instalada por " + eu.nome + ". Versão anterior guardada em: " + pasta + "\n  Reiniciando...\n");
+      responder(res, 200, { ok: true, modo, versao: novaVersao, arquivos: arquivos.map(a => a.caminho) });
+      // reinicia: o iniciar.bat sobe o sistema de novo sozinho (código 75)
+      setTimeout(async () => { servidor.close(); await terminarGravacao(); process.exit(75); }, 800);
+      return;
+    } catch (e) {
+      console.error("Falha na atualização:", e.message);
+      return erro(res, 502, e.message);
+    }
   }
 
   /* --- usuários (só administrador) --- */

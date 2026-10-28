@@ -8,15 +8,16 @@
 <link rel="icon" type="image/svg+xml" href="/icone.svg">
 <link rel="apple-touch-icon" href="/icone-180.png">
 <link rel="manifest" href="/manifest.json">
+<script>/* aplica a skin salva antes de desenhar a tela, sem piscar */try{var t=JSON.parse(localStorage.getItem("farinha.tema")||"{}");if(t.skin)document.documentElement.setAttribute("data-skin",t.skin);if(t.modo==="escuro")document.documentElement.setAttribute("data-theme","dark");if(t.modo==="claro")document.documentElement.setAttribute("data-theme","light");}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Saira+Stencil+One&family=Oswald:wght@500;600&display=swap">
 <style>
 /* Layout: saco de farinha carimbado — barra de abas no topo, painel em grade, tabelas densas com números em mono */
 :root{
   --bg:#F5F4F1; --surface:#FFFFFF; --sunk:#ECEAE5; --line:#DEDAD2;
   --fg:#22201C; --muted:#625C51;
   --accent:#22201C; --accent-soft:#FBEFD3; --on-accent:#FFFFFF;
-  --gold:#E3A21A; --gold-ink:#8A5A00; --on-gold:#22201C;
+  --gold:#E3A21A; --gold-ink:#8A5A00; --on-gold:#22201C; --marca:#22201C;
   --in:#2E7D4F; --in-soft:#E2F1E7; --out:#B4532A; --out-soft:#F8E8DF;
   --warn:#8A5A00; --warn-soft:#FBF0D2; --bad:#B42318; --bad-soft:#FBE4E1;
   --f-display:"Archivo Black","Arial Black",sans-serif;
@@ -28,7 +29,7 @@
   --bg:#161513; --surface:#1F1D1A; --sunk:#29261F; --line:#3A362F;
   --fg:#F2EFE9; --muted:#A8A194;
   --accent:#E3A21A; --accent-soft:#3A2E14; --on-accent:#22201C;
-  --gold:#E3A21A; --gold-ink:#F0C25C; --on-gold:#22201C;
+  --gold:#E3A21A; --gold-ink:#F0C25C; --on-gold:#22201C; --marca:#F2EFE9;
   --in:#6FC793; --in-soft:#18301F; --out:#F0A07B; --out-soft:#3A2219;
   --warn:#E8C062; --warn-soft:#352B12; --bad:#F2877D; --bad-soft:#3B1C19;
   color-scheme:dark}}
@@ -36,10 +37,82 @@
   --bg:#161513; --surface:#1F1D1A; --sunk:#29261F; --line:#3A362F;
   --fg:#F2EFE9; --muted:#A8A194;
   --accent:#E3A21A; --accent-soft:#3A2E14; --on-accent:#22201C;
-  --gold:#E3A21A; --gold-ink:#F0C25C; --on-gold:#22201C;
+  --gold:#E3A21A; --gold-ink:#F0C25C; --on-gold:#22201C; --marca:#F2EFE9;
   --in:#6FC793; --in-soft:#18301F; --out:#F0A07B; --out-soft:#3A2219;
   --warn:#E8C062; --warn-soft:#352B12; --bad:#F2877D; --bad-soft:#3B1C19;
   color-scheme:dark}
+
+/* ---------- SKINS ----------
+   raio = grafite e dourado (padrão, tokens acima)
+   roda = azul-marinho e dourado, letra de carimbo
+   selo = verde de sacaria e palha */
+:root[data-skin="roda"]{
+  --bg:#F3F5F8; --surface:#FFFFFF; --sunk:#E7EBF1; --line:#D3DAE4;
+  --fg:#16233A; --muted:#55627A;
+  --accent:#1F3A68; --accent-soft:#E3EAF5; --on-accent:#FFFFFF;
+  --gold:#D9A93A; --gold-ink:#7A5A12; --on-gold:#16233A; --marca:#1F3A68;
+  --f-display:"Saira Stencil One","Impact",sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light}
+:root[data-skin="selo"]{
+  --bg:#F5F2E9; --surface:#FFFDF8; --sunk:#ECE6D6; --line:#DCD3BE;
+  --fg:#1E2B24; --muted:#56655C;
+  --accent:#24493A; --accent-soft:#E1ECE5; --on-accent:#FFFFFF;
+  --gold:#2F5D49; --gold-ink:#24493A; --on-gold:#FFFFFF; --marca:#24493A;
+  --f-display:"Oswald","Impact",sans-serif;
+  --f-body:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light}
+@media (prefers-color-scheme: dark){
+  :root[data-skin="roda"]:not([data-theme="light"]){
+    --bg:#0F1522; --surface:#172033; --sunk:#1E2A40; --line:#2C3A55;
+    --fg:#EAF0F8; --muted:#9AA7BD;
+    --accent:#8FB0EE; --accent-soft:#1F2B44; --on-accent:#0E1526;
+    --gold:#D9A93A; --gold-ink:#E9C46A; --on-gold:#16233A; --marca:#CFE0FF; color-scheme:dark}
+  :root[data-skin="selo"]:not([data-theme="light"]){
+    --bg:#111915; --surface:#18231E; --sunk:#203029; --line:#2E4239;
+    --fg:#ECF2EE; --muted:#9DB0A5;
+    --accent:#8CCBA8; --accent-soft:#1D3329; --on-accent:#0F1A15;
+    --gold:#8CCBA8; --gold-ink:#A9DCC0; --on-gold:#0F1A15; --marca:#CFE8DA; color-scheme:dark}
+}
+:root[data-skin="roda"][data-theme="dark"]{
+  --bg:#0F1522; --surface:#172033; --sunk:#1E2A40; --line:#2C3A55;
+  --fg:#EAF0F8; --muted:#9AA7BD;
+  --accent:#8FB0EE; --accent-soft:#1F2B44; --on-accent:#0E1526;
+  --gold:#D9A93A; --gold-ink:#E9C46A; --on-gold:#16233A; --marca:#CFE0FF; color-scheme:dark}
+:root[data-skin="selo"][data-theme="dark"]{
+  --bg:#111915; --surface:#18231E; --sunk:#203029; --line:#2E4239;
+  --fg:#ECF2EE; --muted:#9DB0A5;
+  --accent:#8CCBA8; --accent-soft:#1D3329; --on-accent:#0F1A15;
+  --gold:#8CCBA8; --gold-ink:#A9DCC0; --on-gold:#0F1A15; --marca:#CFE8DA; color-scheme:dark}
+:root[data-theme="light"]{color-scheme:light}
+/* cada skin mostra a sua logo */
+.brand .lg{display:none}
+:root:not([data-skin]) .brand .lg-raio,:root[data-skin="raio"] .brand .lg-raio,:root[data-skin="roda"] .brand .lg-roda,:root[data-skin="selo"] .brand .lg-selo{display:block}
+:root[data-skin="roda"] .brand .nome{letter-spacing:.02em}
+:root[data-skin="selo"] .brand .nome{font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+/* configurações */
+.skins{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.skin{display:flex;flex-direction:column;gap:10px;text-align:left;padding:12px;border-radius:var(--r);border:2px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;font:inherit}
+.skin:hover{border-color:var(--muted)}
+.skin[aria-pressed="true"]{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold) inset}
+.skin .amostra{display:flex;align-items:center;gap:10px;padding:12px;border-radius:4px}
+.skin .amostra svg{width:34px;height:auto;flex:0 0 auto}
+.skin .amostra b{font-size:20px;line-height:1}
+.skin .cores{display:flex;gap:4px}
+.skin .cores i{width:18px;height:18px;border-radius:50%;border:1px solid rgba(0,0,0,.12)}
+.skin .sk-nome{font-weight:600}
+.skin .sk-desc{font-size:13px;color:var(--muted)}
+.modo{display:inline-grid;grid-template-columns:repeat(3,auto);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.modo button{font:500 14px var(--f-body);padding:9px 16px;border:0;background:var(--surface);color:var(--muted);cursor:pointer}
+.modo button[aria-pressed="true"]{background:var(--gold);color:var(--on-gold)}
+.atuform{display:flex;flex-direction:column;gap:10px}
+.atu-drop{display:flex;flex-direction:column;gap:4px;padding:16px;border:2px dashed var(--line);border-radius:var(--r);cursor:pointer;color:var(--fg)}
+.atu-drop:hover{border-color:var(--gold)}
+.atu-drop input{font:inherit;color:var(--muted)}
+.atu-lista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font:400 13px var(--f-mono)}
+.atu-lista li{display:flex;justify-content:space-between;gap:10px;padding:6px 10px;background:var(--sunk);border-radius:4px;overflow-wrap:anywhere}
+.atu-lista li.ruim{background:var(--bad-soft);color:var(--bad)}
+.cfg-linha{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
 *{box-sizing:border-box}
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 [hidden]{display:none!important}
@@ -174,7 +247,7 @@ td .sub{display:block;font-size:12px;color:var(--muted)}
 .notifbox{display:flex;flex-direction:column;gap:6px;padding:12px 10px 4px;margin-top:8px;border-top:1px solid var(--line)}
 .notifbox .hint{font-size:12px}
 /* usuário "só mensagens": esconde todo o resto do sistema */
-.so-chat nav.tabs button:not([data-tab="chat"]),.so-chat [data-view]:not([data-view="chat"]),.so-chat #refresh,.so-chat #exBanner{display:none!important}
+.so-chat nav.tabs button:not([data-tab="chat"]):not([data-tab="config"]),.so-chat [data-view]:not([data-view="chat"]):not([data-view="config"]),.so-chat #refresh,.so-chat #exBanner{display:none!important}
 /* somente leitura */
 .ro .write{display:none!important}
 .ro .split{grid-template-columns:minmax(0,1fr)}
@@ -220,8 +293,8 @@ nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:v
 
 <div class="wrap">
   <header class="top">
-    <div class="brand"><svg viewBox="0 0 200 220" aria-hidden="true"><polygon points="128,6 66,118 102,118 74,214 158,92 118,92 150,6" fill="var(--gold)"></polygon><g fill="none" stroke="var(--bg)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><polyline points="120 30 128 41 136 30"></polyline><polyline points="108 52 118 63 128 52"></polyline><polyline points="95 74 108 85 120 74"></polyline></g></svg><div><div class="nome">Moinho Raios</div><small>Controle de farinha · Estoque e financeiro</small></div></div>
-    <div class="row"><div class="userbox" id="userBox" hidden><span><span class="who" id="userNome"></span> <span class="papel" id="userPapel"></span></span><button class="btn sm quiet" id="btnSenha" type="button">Trocar senha</button><button class="btn sm quiet" id="btnSair" type="button">Sair</button></div><span class="robadge" id="roBadge" hidden>Somente leitura</span><div class="status" id="status">Conectando…</div><button class="btn sm quiet" id="refresh" type="button">↻ Atualizar dados</button></div>
+    <div class="brand"><svg class="lg lg-raio" viewBox="0 0 200 220" aria-hidden="true"><polygon points="128,6 66,118 102,118 74,214 158,92 118,92 150,6" fill="var(--gold)"></polygon><g fill="none" stroke="var(--bg)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><polyline points="120 30 128 41 136 30"></polyline><polyline points="108 52 118 63 128 52"></polyline><polyline points="95 74 108 85 120 74"></polyline></g></svg><svg class="lg lg-roda" viewBox="0 0 200 200" aria-hidden="true"><g fill="var(--gold)"><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(0 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(30 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(60 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(90 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(120 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(150 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(180 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(210 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(240 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(270 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(300 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(330 100 100)"></rect></g><circle cx="100" cy="100" r="72" fill="none" stroke="var(--marca)" stroke-width="11"></circle><g stroke="var(--marca)" stroke-width="6" stroke-linecap="round"><line x1="100" y1="86" x2="100" y2="32" transform="rotate(15 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(45 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(75 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(105 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(135 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(165 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(195 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(225 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(255 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(285 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(315 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(345 100 100)"></line></g><circle cx="100" cy="100" r="16" fill="var(--marca)"></circle><circle cx="100" cy="100" r="6" fill="var(--gold)"></circle></svg><svg class="lg lg-selo" viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="94" fill="none" stroke="var(--marca)" stroke-width="7"></circle><circle cx="100" cy="100" r="82" fill="none" stroke="var(--marca)" stroke-width="2"></circle><g fill="var(--marca)"><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(0.0 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(22.5 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(45.0 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(67.5 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(90.0 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(112.5 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(135.0 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(157.5 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(180.0 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(202.5 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(225.0 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(247.5 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(270.0 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(292.5 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(315.0 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(337.5 100 100)"></ellipse></g><circle cx="100" cy="100" r="20" fill="var(--marca)"></circle></svg><div><div class="nome">Moinho Raios</div><small>Controle de farinha · Estoque e financeiro</small></div></div>
+    <div class="row"><div class="userbox" id="userBox" hidden><span><span class="who" id="userNome"></span> <span class="papel" id="userPapel"></span></span><button class="btn sm quiet" id="btnSair" type="button">Sair</button></div><span class="robadge" id="roBadge" hidden>Somente leitura</span><div class="status" id="status">Conectando…</div><button class="btn sm quiet" id="refresh" type="button">↻ Atualizar dados</button></div>
   </header>
 
   <nav class="tabs" role="tablist" id="tabs">
@@ -231,6 +304,7 @@ nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:v
     <button role="tab" data-tab="pagar">Contas a pagar<span class="count" id="cPagar" hidden></span></button>
     <button role="tab" data-tab="receber">Contas a receber<span class="count" id="cReceber" hidden></span></button>
     <button role="tab" data-tab="usuarios" id="tabUsuarios" hidden>Usuários</button>
+    <button role="tab" data-tab="config">Configurações</button>
     <button role="tab" data-tab="chat">Mensagens<span class="count" id="cChat" hidden style="background:var(--gold);color:var(--on-gold)"></span></button>
   </nav>
 
@@ -365,6 +439,49 @@ nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:v
     </div>
   </section>
 
+  <!-- CONFIGURAÇÕES (todos os usuários) -->
+  <section class="section" data-view="config" hidden>
+    <div class="panel">
+      <h2>Aparência</h2>
+      <p class="hint">Escolha a skin do sistema. Fica salva no seu usuário e vale em todos os aparelhos.</p>
+      <div class="skins" id="skins">
+        <button type="button" class="skin" data-skin="raio" aria-pressed="false"><span class="amostra" style="background:#22201C;color:#FFFFFF"><svg viewBox="0 0 200 220" aria-hidden="true"><polygon points="128,6 66,118 102,118 74,214 158,92 118,92 150,6" fill="#E3A21A"></polygon><g fill="none" stroke="#22201C" stroke-width="6" stroke-linecap="round"><polyline points="120 30 128 41 136 30"></polyline><polyline points="108 52 118 63 128 52"></polyline><polyline points="95 74 108 85 120 74"></polyline></g></svg><b style="font-family:'Archivo Black',sans-serif">Moinho Raios</b></span><span class="cores"><i style="background:#22201C"></i><i style="background:#E3A21A"></i><i style="background:#F5F4F1"></i></span><span class="sk-nome">Raio</span><span class="sk-desc">Grafite e dourado. A identidade principal do moinho.</span></button>
+        <button type="button" class="skin" data-skin="roda" aria-pressed="false"><span class="amostra" style="background:#1F3A68;color:#FFFFFF"><svg  viewBox="0 0 200 200" aria-hidden="true"><g fill="#D9A93A"><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(0 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(30 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(60 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(90 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(120 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(150 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(180 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(210 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(240 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(270 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(300 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(330 100 100)"></rect></g><circle cx="100" cy="100" r="72" fill="none" stroke="#FFFFFF" stroke-width="11"></circle><g stroke="#FFFFFF" stroke-width="6" stroke-linecap="round"><line x1="100" y1="86" x2="100" y2="32" transform="rotate(15 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(45 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(75 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(105 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(135 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(165 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(195 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(225 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(255 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(285 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(315 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(345 100 100)"></line></g><circle cx="100" cy="100" r="16" fill="#FFFFFF"></circle><circle cx="100" cy="100" r="6" fill="#D9A93A"></circle></svg><b style="font-family:'Saira Stencil One',sans-serif">Moinho Raios</b></span><span class="cores"><i style="background:#1F3A68"></i><i style="background:#D9A93A"></i><i style="background:#F3F5F8"></i></span><span class="sk-nome">Roda</span><span class="sk-desc">Azul-marinho e dourado, com letra de carimbo.</span></button>
+        <button type="button" class="skin" data-skin="selo" aria-pressed="false"><span class="amostra" style="background:#24493A;color:#EDE3CF"><svg  viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="94" fill="none" stroke="#EDE3CF" stroke-width="7"></circle><circle cx="100" cy="100" r="82" fill="none" stroke="#EDE3CF" stroke-width="2"></circle><g fill="#EDE3CF"><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(0.0 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(22.5 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(45.0 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(67.5 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(90.0 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(112.5 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(135.0 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(157.5 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(180.0 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(202.5 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(225.0 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(247.5 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(270.0 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(292.5 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(315.0 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(337.5 100 100)"></ellipse></g><circle cx="100" cy="100" r="20" fill="#EDE3CF"></circle></svg><b style="font-family:Oswald,sans-serif">Moinho Raios</b></span><span class="cores"><i style="background:#24493A"></i><i style="background:#EDE3CF"></i><i style="background:#F5F2E9"></i></span><span class="sk-nome">Selo</span><span class="sk-desc">Verde de sacaria e palha, estilo selo de saco.</span></button>
+      </div>
+      <div class="cfg-linha">
+        <div><h3>Modo</h3><p class="hint">Automático segue o claro/escuro do aparelho.</p></div>
+        <div class="modo" id="modo" role="group" aria-label="Modo claro ou escuro">
+          <button type="button" data-modo="auto" aria-pressed="true">Automático</button>
+          <button type="button" data-modo="claro" aria-pressed="false">Claro</button>
+          <button type="button" data-modo="escuro" aria-pressed="false">Escuro</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Conta</h2>
+      <div class="cfg-linha">
+        <div><div class="who" id="cfgNome"></div><p class="hint" id="cfgLogin"></p></div>
+        <button class="btn quiet" id="btnSenha" type="button">Trocar senha</button>
+      </div>
+    </div>
+    <div class="panel" id="painelAtualizacao" hidden>
+      <h2>Atualizar sistema</h2>
+      <p class="hint" id="atuStatus">Verificando…</p>
+      <form id="atuForm" class="atuform">
+        <label class="atu-drop" for="atuArq">
+          <input type="file" id="atuArq" multiple accept=".js,.json,.html,.svg,.png,.txt,.bat,.sh">
+          <b>Escolher arquivos da atualização</b>
+          <span class="hint">Selecione os arquivos que recebeu (server.js, index.html, package.json…). Pode selecionar vários de uma vez.</span>
+        </label>
+        <ul class="atu-lista" id="atuLista"></ul>
+        <p class="err" id="atuErr" hidden></p>
+        <div class="row"><button class="btn" type="submit" id="atuBtn" disabled>Enviar atualização</button></div>
+      </form>
+      <div class="banner" id="atuOk" hidden></div>
+    </div>
+  </section>
+
   <!-- USUÁRIOS (só administrador) -->
   <section class="section" data-view="usuarios" hidden>
     <div class="grid split">
@@ -376,10 +493,11 @@ nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:v
           <label>Senha inicial<input id="uSenha" type="text" required placeholder="Mínimo 4 caracteres"></label>
           <label>Tipo de acesso<select id="uPapel">
             <option value="operador">Operador: lança estoque e contas</option>
-            <option value="acompanhante">Acompanhante: só vê e conversa</option>
-            <option value="mensagens">Só mensagens: não vê o sistema, só conversa</option>
+            <option value="acompanhante">Acompanhante: vê TODO o sistema, sem alterar nada</option>
+            <option value="mensagens">Só mensagens: NÃO vê estoque nem contas, só conversa</option>
             <option value="admin">Administrador: tudo + usuários</option>
           </select></label>
+          <p class="hint" id="uPapelHint"></p>
           <p class="hint">No primeiro acesso o sistema pede para a pessoa trocar a senha.</p>
           <p class="err" id="uErr" hidden></p>
           <button class="btn" type="submit">Criar usuário</button>
@@ -439,7 +557,7 @@ nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:v
 <div class="banner" id="vBanner" hidden style="position:fixed;left:50%;transform:translateX(-50%);top:calc(12px + env(safe-area-inset-top,0px));z-index:30;display:flex;gap:12px;align-items:center;flex-wrap:wrap;box-shadow:0 4px 18px rgba(0,0,0,.18);max-width:calc(100% - 32px)"><span>Nova versão <b id="vBannerNum"></b> disponível.</span><button class="btn sm" type="button" id="vBannerBtn">Atualizar agora</button></div>
 <div class="overlay" id="loginTela" hidden>
   <div class="panel">
-    <div class="brand"><svg viewBox="0 0 200 220" aria-hidden="true"><polygon points="128,6 66,118 102,118 74,214 158,92 118,92 150,6" fill="var(--gold)"></polygon><g fill="none" stroke="var(--surface)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><polyline points="120 30 128 41 136 30"></polyline><polyline points="108 52 118 63 128 52"></polyline><polyline points="95 74 108 85 120 74"></polyline></g></svg><div><div class="nome">Moinho Raios</div><small>Entre com seu usuário</small></div></div>
+    <div class="brand"><svg class="lg lg-raio" viewBox="0 0 200 220" aria-hidden="true"><polygon points="128,6 66,118 102,118 74,214 158,92 118,92 150,6" fill="var(--gold)"></polygon><g fill="none" stroke="var(--surface)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><polyline points="120 30 128 41 136 30"></polyline><polyline points="108 52 118 63 128 52"></polyline><polyline points="95 74 108 85 120 74"></polyline></g></svg><svg class="lg lg-roda" viewBox="0 0 200 200" aria-hidden="true"><g fill="var(--gold)"><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(0 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(30 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(60 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(90 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(120 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(150 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(180 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(210 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(240 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(270 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(300 100 100)"></rect><rect x="91" y="4" width="18" height="22" rx="2" transform="rotate(330 100 100)"></rect></g><circle cx="100" cy="100" r="72" fill="none" stroke="var(--marca)" stroke-width="11"></circle><g stroke="var(--marca)" stroke-width="6" stroke-linecap="round"><line x1="100" y1="86" x2="100" y2="32" transform="rotate(15 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(45 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(75 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(105 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(135 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(165 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(195 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(225 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(255 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(285 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(315 100 100)"></line><line x1="100" y1="86" x2="100" y2="32" transform="rotate(345 100 100)"></line></g><circle cx="100" cy="100" r="16" fill="var(--marca)"></circle><circle cx="100" cy="100" r="6" fill="var(--gold)"></circle></svg><svg class="lg lg-selo" viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="94" fill="none" stroke="var(--marca)" stroke-width="7"></circle><circle cx="100" cy="100" r="82" fill="none" stroke="var(--marca)" stroke-width="2"></circle><g fill="var(--marca)"><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(0.0 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(22.5 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(45.0 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(67.5 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(90.0 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(112.5 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(135.0 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(157.5 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(180.0 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(202.5 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(225.0 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(247.5 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(270.0 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(292.5 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(315.0 100 100)"></ellipse><ellipse cx="100" cy="52" rx="7" ry="15" transform="rotate(337.5 100 100)"></ellipse></g><circle cx="100" cy="100" r="20" fill="var(--marca)"></circle></svg><div><div class="nome">Moinho Raios</div><small>Entre com seu usuário</small></div></div>
     <form id="loginForm" autocomplete="on">
       <label>Usuário<input id="lUser" required autocapitalize="none" autocomplete="username"></label>
       <label>Senha<input id="lSenha" type="password" required autocomplete="current-password"></label>
@@ -522,7 +640,7 @@ function situacaoConta(c){ if(c.pago) return ["ok",c.tipo==="pagar"?"Paga":"Rece
   const d=c.vencimento, h=hoje(); if(d<h) return ["bad","Vencida"]; if(d===h) return ["warn","Vence hoje"]; return ["open","Em aberto"]; }
 
 /* ---------- abas ---------- */
-function setTab(t){if(document.body.classList.contains("so-chat"))t="chat";S.tab=t;document.querySelectorAll("#tabs button").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.tab===t)));
+function setTab(t){if(document.body.classList.contains("so-chat")&&t!=="config")t="chat";S.tab=t;document.querySelectorAll("#tabs button").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.tab===t)));
   document.querySelectorAll("[data-view]").forEach(v=>v.hidden=v.dataset.view!==t);
   try{localStorage.setItem("farinha.tab",t);}catch(e){} }
 $("#tabs").addEventListener("click",e=>{const b=e.target.closest("button[data-tab]");if(b)setTab(b.dataset.tab);});
@@ -752,8 +870,10 @@ if("serviceWorker" in navigator&&window.isSecureContext){navigator.serviceWorker
 renderNotif();
 
 /* ---------- versões do sistema ---------- */
-const VERSAO="1.10.1";
+const VERSAO="1.12.0";
 const HISTORICO=[
+  {v:"1.12.0",d:"2026-10-28",n:["Atualizar o sistema pela própria tela: Configurações > Atualizar sistema (administrador).","Na internet os arquivos vão sozinhos para o GitHub e o site se atualiza; no computador da loja o sistema instala e reinicia.","Arquivos com erro são recusados antes de mexer em qualquer coisa."]},
+  {v:"1.11.0",d:"2026-10-27",n:["Nova aba Configurações: escolha entre 3 skins (Raio, Roda e Selo) e o modo claro, escuro ou automático.","A skin fica salva no usuário e vale em todos os aparelhos.","Trocar senha agora fica em Configurações."]},
   {v:"1.10.1",d:"2026-10-25",n:["Servidor encontra as telas mesmo se os arquivos forem enviados fora da pasta public."]},
   {v:"1.10.0",d:"2026-10-25",n:["Pronto para rodar na internet (Render), com os dados guardados no banco Neon.","No computador da loja continua funcionando igual, com o arquivo de dados."]},
   {v:"1.9.0",d:"2026-10-24",n:["Notificações de mensagens no computador e no celular, com abertura direto na conversa.","Som ao chegar mensagem (pode desligar).","Contador de mensagens não lidas na aba do navegador."]},
@@ -856,18 +976,63 @@ function render(){
 $("#mData").value=hoje();setTipo("entrada");
 try{const t=localStorage.getItem("farinha.tab");if(t&&document.querySelector('[data-view="'+t+'"]'))setTab(t);}catch(e){}
 render();
+/* ---------- skins e modo claro/escuro ---------- */
+const SKINS=["raio","roda","selo"],MODOS=["auto","claro","escuro"];
+function aplicarTema(skin,modo){skin=SKINS.includes(skin)?skin:"raio";modo=MODOS.includes(modo)?modo:"auto";
+  const r=document.documentElement;r.setAttribute("data-skin",skin);
+  if(modo==="auto")r.removeAttribute("data-theme");else r.setAttribute("data-theme",modo==="escuro"?"dark":"light");
+  document.querySelectorAll("#skins .skin").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.skin===skin)));
+  document.querySelectorAll("#modo button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.modo===modo)));
+  const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=getComputedStyle(r).getPropertyValue("--bg").trim()||"#22201C";
+  try{localStorage.setItem("farinha.tema",JSON.stringify({skin,modo}));}catch(e){}}
+function temaAtual(){return{skin:document.documentElement.getAttribute("data-skin")||"raio",modo:document.documentElement.getAttribute("data-theme")==="dark"?"escuro":document.documentElement.getAttribute("data-theme")==="light"?"claro":"auto"};}
+async function salvarTema(t){aplicarTema(t.skin,t.modo);if(!TOKEN)return;
+  try{const j=await req("POST","/api/preferencias",t);if(EU)Object.assign(EU,{skin:j.usuario.skin,modo:j.usuario.modo});}catch(e){toast(e.msg||"Não foi possível salvar a preferência.");}}
+$("#skins").addEventListener("click",e=>{const b=e.target.closest(".skin");if(!b)return;salvarTema({...temaAtual(),skin:b.dataset.skin});toast("Skin "+b.querySelector(".sk-nome").textContent+" aplicada");});
+$("#modo").addEventListener("click",e=>{const b=e.target.closest("button[data-modo]");if(b)salvarTema({...temaAtual(),modo:b.dataset.modo});});
+try{const t=JSON.parse(localStorage.getItem("farinha.tema")||"{}");aplicarTema(t.skin,t.modo);}catch(e){aplicarTema();}
+
+/* ---------- atualizar sistema pela tela (administrador) ---------- */
+let atuInfo=null,atuArquivos=[];
+async function carregarAtualizacao(){const box=$("#painelAtualizacao");if(!EU||EU.papel!=="admin"){box.hidden=true;return;}
+  box.hidden=false;try{atuInfo=await req("GET","/api/atualizacao");}catch(e){$("#atuStatus").textContent="Não foi possível verificar.";return;}
+  const st=$("#atuStatus");
+  if(atuInfo.modo==="github")st.textContent="Versão atual "+atuInfo.versao+". Os arquivos são enviados ao GitHub ("+atuInfo.repo+") e o site se atualiza sozinho em 2 a 3 minutos.";
+  else if(atuInfo.modo==="local")st.textContent="Versão atual "+atuInfo.versao+". Os arquivos são instalados neste computador e o sistema reinicia sozinho (a versão anterior fica guardada em dados/versoes-antigas).";
+  else st.textContent="Para atualizar por aqui, configure no Render as variáveis GITHUB_TOKEN e GITHUB_REPO (veja PUBLICAR-NA-INTERNET.txt).";
+  $("#atuForm").hidden=atuInfo.modo==="indisponivel";}
+const nomeLimpo=n=>n.replace(/^.*[\\/]/,"").replace(/\s*\(\d+\)(?=\.[^.]+$)/,"");
+function lerBase64(f){return new Promise((ok,falha)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(",")[1]||"");r.onerror=()=>falha(r.error);r.readAsDataURL(f);});}
+$("#atuArq").addEventListener("change",()=>{atuArquivos=[...$("#atuArq").files];$("#atuErr").hidden=true;$("#atuOk").hidden=true;
+  const ok=atuInfo?atuInfo.permitidos:[];let ruins=0;
+  $("#atuLista").innerHTML=atuArquivos.map(f=>{const n=nomeLimpo(f.name),bom=ok.includes(n);if(!bom)ruins++;
+    return'<li class="'+(bom?"":"ruim")+'"><span>'+esc(n)+(n!==f.name?' <span class="hint">(era '+esc(f.name)+')</span>':'')+'</span><span>'+(bom?(f.size/1024).toFixed(0)+" KB":"não faz parte do sistema")+'</span></li>';}).join("");
+  $("#atuBtn").disabled=!atuArquivos.length||ruins>0;
+  if(ruins){$("#atuErr").textContent="Tire da seleção os arquivos marcados em vermelho.";$("#atuErr").hidden=false;}});
+$("#atuForm").addEventListener("submit",async e=>{e.preventDefault();const b=$("#atuBtn"),er=$("#atuErr");er.hidden=true;b.disabled=true;b.textContent="Enviando…";
+  try{const arquivos=[];for(const f of atuArquivos)arquivos.push({nome:f.name,base64:await lerBase64(f)});
+    const j=await req("POST","/api/atualizacao",{arquivos});
+    const ok=$("#atuOk");ok.hidden=false;
+    ok.textContent=j.modo==="github"?"Atualização enviada"+(j.versao?" (versão "+j.versao+")":"")+". O site vai se atualizar sozinho em 2 a 3 minutos. Depois disso, todos verão o aviso Atualizar agora."
+      :"Atualização instalada"+(j.versao?" (versão "+j.versao+")":"")+". O sistema está reiniciando; a página recarrega em alguns segundos.";
+    $("#atuArq").value="";atuArquivos=[];$("#atuLista").innerHTML="";
+    if(j.modo==="local")setTimeout(()=>location.reload(),6000);}
+  catch(x){er.textContent=x.msg||"Não foi possível enviar a atualização.";er.hidden=false;b.disabled=false;}
+  b.textContent="Enviar atualização";});
+
 /* ---------- login, usuários e senha ---------- */
 const NOME_PAPEL={admin:"Administrador",operador:"Operador",acompanhante:"Acompanhante",mensagens:"Só mensagens"};
 function mostrarLogin(msg){$("#loginTela").hidden=false;$("#userBox").hidden=true;const e=$("#lErr");e.hidden=!msg;e.textContent=msg||"";setTimeout(()=>$("#lUser").focus(),50);}
 function entrar(u){EU=u;meuId=u.id;store=api;$("#loginTela").hidden=true;
-  $("#userBox").hidden=false;$("#userNome").textContent=u.nome;$("#userPapel").textContent=NOME_PAPEL[u.papel]||u.papel;
+  $("#userBox").hidden=false;$("#userNome").textContent=u.nome;$("#cfgNome").textContent=u.nome;$("#cfgLogin").textContent="Login: "+u.usuario+" · "+(NOME_PAPEL[u.papel]||u.papel);
+  if(u.skin||u.modo)aplicarTema(u.skin,u.modo);$("#userPapel").textContent=NOME_PAPEL[u.papel]||u.papel;
   setRO(!["admin","operador"].includes(u.papel));$("#tabUsuarios").hidden=u.papel!=="admin";
   document.body.classList.toggle("so-chat",u.papel==="mensagens");$("#roBadge").textContent=u.papel==="mensagens"?"Só mensagens":"Somente leitura";if(u.papel==="mensagens")setTab("chat");
   if(u.papel!=="admin"&&S.tab==="usuarios")setTab("painel");
   if(u.trocarSenha)abrirSenha(true);
   rev=0;sincronizar(true);clearInterval(poll);let ultimaSync=0;poll=setInterval(()=>{if(!document.hidden||Date.now()-ultimaSync>9000){ultimaSync=Date.now();sincronizar();}},3000);
   if(location.hash==="#chat")setTab("chat");renderNotif();
-  if(u.papel==="admin")carregarUsuarios();}
+  if(u.papel==="admin")carregarUsuarios();carregarAtualizacao();}
 function sair(expirado){document.body.classList.remove("so-chat");vistosIds=new Set();vistosInit=false;document.title=TITULO_BASE;clearInterval(poll);poll=null;TOKEN=null;EU=null;meuId=null;store=null;rev=0;
   try{localStorage.removeItem("farinha.token");}catch(e){}
   S.produtos=[];S.movimentos=[];S.contas=[];msgs=[];pessoas=[];render();renderChat();
@@ -887,6 +1052,9 @@ $("#senhaForm").addEventListener("submit",async e=>{e.preventDefault();const er=
   catch(x){er.textContent=x.msg||"Não foi possível trocar a senha.";er.hidden=false;}});
 
 /* usuários (administrador) */
+const DESC_PAPEL={operador:"Lança estoque, entradas, saídas e contas, e usa as mensagens.",acompanhante:"Vê o painel, o estoque, as movimentações e as contas, mas não altera nada. Usa as mensagens.",mensagens:"Vê somente a aba Mensagens (e Configurações). Não vê estoque nem financeiro.",admin:"Faz tudo, inclusive criar e alterar usuários."};
+function papelHint(){$("#uPapelHint").textContent=DESC_PAPEL[$("#uPapel").value]||"";}
+$("#uPapel").addEventListener("change",papelHint);papelHint();
 let usuarios=[],uArmed=null;
 async function carregarUsuarios(){try{usuarios=(await req("GET","/api/usuarios")).usuarios;renderUsuarios();}catch(e){}}
 function renderUsuarios(){$("#uRows").innerHTML=usuarios.slice().sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR")).map(u=>{const eu=EU&&u.id===EU.id;
