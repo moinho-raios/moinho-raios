@@ -246,6 +246,17 @@ td .sub{display:block;font-size:12px;color:var(--muted)}
 }
 .notifbox{display:flex;flex-direction:column;gap:6px;padding:12px 10px 4px;margin-top:8px;border-top:1px solid var(--line)}
 .notifbox .hint{font-size:12px}
+/* relatórios */
+.relgraf{display:flex;align-items:flex-end;gap:2px;height:200px;padding:8px 0 0;border-bottom:1px solid var(--line);overflow-x:auto}
+.relgraf .dia{flex:1 0 10px;min-width:10px;max-width:42px;height:100%;display:flex;align-items:flex-end;gap:1px;position:relative}
+.relgraf .dia i{flex:1;display:block;border-radius:3px 3px 0 0;min-height:0}
+.relgraf .dia i.e{background:var(--in)} .relgraf .dia i.s{background:var(--out)}
+.relgraf .dia:hover{background:var(--sunk)}
+.relgraf-eixo{display:flex;justify-content:space-between;font:400 11px var(--f-mono);color:var(--muted);padding-top:4px}
+.legenda{display:flex;gap:12px;font-size:13px;color:var(--muted)}
+.legenda span{display:flex;align-items:center;gap:6px}
+.legenda i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.kpi .v.pos{color:var(--in)} .kpi .v.neg{color:var(--bad)}
 /* usuário "só mensagens": esconde todo o resto do sistema */
 .so-chat nav.tabs button:not([data-tab="chat"]):not([data-tab="config"]),.so-chat [data-view]:not([data-view="chat"]):not([data-view="config"]),.so-chat #refresh,.so-chat #exBanner{display:none!important}
 /* somente leitura */
@@ -303,6 +314,7 @@ nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:v
     <button role="tab" data-tab="movs">Entradas e saídas</button>
     <button role="tab" data-tab="pagar">Contas a pagar<span class="count" id="cPagar" hidden></span></button>
     <button role="tab" data-tab="receber">Contas a receber<span class="count" id="cReceber" hidden></span></button>
+    <button role="tab" data-tab="relatorios">Relatórios</button>
     <button role="tab" data-tab="usuarios" id="tabUsuarios" hidden>Usuários</button>
     <button role="tab" data-tab="config">Configurações</button>
     <button role="tab" data-tab="chat">Mensagens<span class="count" id="cChat" hidden style="background:var(--gold);color:var(--on-gold)"></span></button>
@@ -410,6 +422,64 @@ nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:v
   <!-- CONTAS (pagar / receber compartilham o mesmo modelo) -->
   <section class="section" data-view="pagar" hidden></section>
   <section class="section" data-view="receber" hidden></section>
+
+  <!-- RELATÓRIOS (administrador e operador) -->
+  <section class="section" data-view="relatorios" hidden>
+    <div class="panel">
+      <div class="row between">
+        <h2>Relatórios</h2>
+        <div class="filters" id="relPeriodo" role="group" aria-label="Período">
+          <button type="button" data-p="mes" aria-pressed="true">Este mês</button>
+          <button type="button" data-p="mesant" aria-pressed="false">Mês passado</button>
+          <button type="button" data-p="30" aria-pressed="false">Últimos 30 dias</button>
+          <button type="button" data-p="ano" aria-pressed="false">Este ano</button>
+          <button type="button" data-p="custom" aria-pressed="false">Escolher datas</button>
+        </div>
+      </div>
+      <div class="row" id="relDatas" hidden>
+        <label>De<input type="date" id="relDe"></label>
+        <label>Até<input type="date" id="relAte"></label>
+      </div>
+      <p class="hint" id="relTitulo"></p>
+    </div>
+
+    <div class="grid g4" id="relKpis"></div>
+
+    <div class="panel">
+      <div class="row between"><h2>Movimentação no período</h2>
+        <div class="legenda"><span><i style="background:var(--in)"></i>Entradas</span><span><i style="background:var(--out)"></i>Saídas</span></div>
+      </div>
+      <div id="relGrafico" class="relgraf"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Por farinha</h2>
+      <div class="tablebox"><table>
+        <thead><tr><th>Farinha</th><th class="r">Entradas</th><th class="r">Saídas</th><th class="r">Vendas</th><th class="r">Custo</th><th class="r">Lucro</th><th class="r">Margem</th><th class="r">Saldo hoje</th></tr></thead>
+        <tbody id="relProdutos"></tbody>
+      </table></div>
+    </div>
+
+    <div class="grid g2">
+      <div class="panel">
+        <h2>Financeiro do período</h2>
+        <div class="tablebox"><table><tbody id="relFin"></tbody></table></div>
+        <p class="hint">Recebido e pago contam pela data em que a conta foi baixada. Em aberto e vencidas contam pelo vencimento dentro do período.</p>
+      </div>
+      <div class="panel">
+        <h2>Maiores clientes</h2>
+        <div class="tablebox"><table>
+          <thead><tr><th>Cliente</th><th class="r">Quantidade</th><th class="r">Valor</th></tr></thead>
+          <tbody id="relClientes"></tbody>
+        </table></div>
+        <h2 style="margin-top:8px">Maiores fornecedores</h2>
+        <div class="tablebox"><table>
+          <thead><tr><th>Fornecedor</th><th class="r">Quantidade</th><th class="r">Valor</th></tr></thead>
+          <tbody id="relFornecedores"></tbody>
+        </table></div>
+      </div>
+    </div>
+  </section>
 
   <!-- MENSAGENS -->
   <section class="section" data-view="chat" hidden>
@@ -868,9 +938,82 @@ if("serviceWorker" in navigator&&window.isSecureContext){navigator.serviceWorker
   navigator.serviceWorker.addEventListener("message",e=>{if(e.data&&e.data.abrirConversa){setTab("chat");abrirConversa(e.data.abrirConversa);}});}
 renderNotif();
 
+/* ---------- relatórios ---------- */
+const REL={p:"mes",de:"",ate:""};
+function isoDe(d){const x=new Date(d);x.setMinutes(x.getMinutes()-x.getTimezoneOffset());return x.toISOString().slice(0,10);}
+function periodoRel(){const h=new Date();const y=h.getFullYear(),m=h.getMonth();
+  if(REL.p==="mes")return[isoDe(new Date(y,m,1)),isoDe(new Date(y,m+1,0))];
+  if(REL.p==="mesant")return[isoDe(new Date(y,m-1,1)),isoDe(new Date(y,m,0))];
+  if(REL.p==="30"){const d=new Date();d.setDate(d.getDate()-29);return[isoDe(d),hoje()];}
+  if(REL.p==="ano")return[isoDe(new Date(y,0,1)),isoDe(new Date(y,11,31))];
+  const de=REL.de||hoje(),ate=REL.ate||hoje();return de<=ate?[de,ate]:[ate,de];}
+$("#relPeriodo").addEventListener("click",e=>{const b=e.target.closest("button[data-p]");if(!b)return;REL.p=b.dataset.p;
+  $("#relPeriodo").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
+  $("#relDatas").hidden=REL.p!=="custom";if(REL.p==="custom"&&!REL.de){const[d,a]=[isoDe(new Date(new Date().getFullYear(),new Date().getMonth(),1)),hoje()];REL.de=d;REL.ate=a;$("#relDe").value=d;$("#relAte").value=a;}
+  renderRelatorios();});
+["#relDe","#relAte"].forEach(x=>$(x).addEventListener("change",()=>{REL.de=$("#relDe").value;REL.ate=$("#relAte").value;renderRelatorios();}));
+function renderRelatorios(){
+  if(S.tab!=="relatorios")return;
+  const[de,ate]=periodoRel();const dentro=d=>d&&d>=de&&d<=ate;
+  $("#relTitulo").textContent="Período: "+dataBR(de)+" a "+dataBR(ate)+". Valores em reais; quantidades em gramas (a partir de 1.000 g aparece em kg).";
+  const prod=id=>S.produtos.find(p=>p.id===id)||{};
+  const movs=S.movimentos.filter(m=>dentro(m.data));
+  const ent=movs.filter(m=>m.tipo==="entrada"),sai=movs.filter(m=>m.tipo==="saida");
+  const soma=(l,f)=>l.reduce((s,x)=>s+(f(x)||0),0);
+  const gE=soma(ent,m=>m.gramas),gS=soma(sai,m=>m.gramas),vCompra=soma(ent,m=>m.valor),vVenda=soma(sai,m=>m.valor);
+  const custoSaida=m=>Math.round((m.gramas||0)*(prod(m.produtoId).custoKg||0)/1000);
+  const cVenda=soma(sai,custoSaida),lucro=vVenda-cVenda,margem=vVenda?lucro/vVenda*100:0;
+  const pct=n=>(Math.round(n*10)/10).toString().replace(".",",")+"%";
+  const kpi=(t,v,sub,cls)=>'<div class="panel kpi"><h3>'+t+'</h3><div class="v'+(cls?" "+cls:"")+'">'+v+'</div><div class="s">'+sub+'</div></div>';
+  $("#relKpis").innerHTML=
+    kpi("Entradas",peso(gE),ent.length+" lançamento"+(ent.length===1?"":"s")+" · "+brl(vCompra)+" em compras")+
+    kpi("Saídas",peso(gS),sai.length+" lançamento"+(sai.length===1?"":"s"))+
+    kpi("Vendas",brl(vVenda),"custo das vendas: "+brl(cVenda))+
+    kpi("Lucro bruto",brl(lucro),vVenda?"margem de "+pct(margem)+" sobre as vendas":"sem vendas no período",lucro>0?"pos":lucro<0?"neg":"");
+  /* gráfico: por dia (até 62 dias) ou por mês */
+  const dias=Math.round((new Date(ate)-new Date(de))/864e5)+1;const porMes=dias>62;
+  const chave=d=>porMes?d.slice(0,7):d;const grupos=[];
+  if(porMes){let d=new Date(de.slice(0,7)+"-01T12:00:00");while(isoDe(d).slice(0,7)<=ate.slice(0,7)){grupos.push(isoDe(d).slice(0,7));d.setMonth(d.getMonth()+1);}}
+  else{let d=new Date(de+"T12:00:00");for(let i=0;i<dias;i++){grupos.push(isoDe(d));d.setDate(d.getDate()+1);}}
+  const agE={},agS={};movs.forEach(m=>{const k=chave(m.data);(m.tipo==="entrada"?agE:agS)[k]=((m.tipo==="entrada"?agE:agS)[k]||0)+(m.gramas||0);});
+  const max=Math.max(1,...grupos.map(k=>Math.max(agE[k]||0,agS[k]||0)));
+  const rot=k=>porMes?k.slice(5,7)+"/"+k.slice(0,4):dataBR(k);
+  $("#relGrafico").innerHTML=movs.length?grupos.map(k=>'<div class="dia" title="'+rot(k)+" · entradas "+peso(agE[k]||0)+" · saídas "+peso(agS[k]||0)+'"><i class="e" style="height:'+((agE[k]||0)/max*100).toFixed(1)+'%"></i><i class="s" style="height:'+((agS[k]||0)/max*100).toFixed(1)+'%"></i></div>').join("")
+    :'<div class="empty" style="margin:auto">Nenhuma movimentação no período.</div>';
+  const eixo=document.getElementById("relEixo")||Object.assign(document.createElement("div"),{id:"relEixo",className:"relgraf-eixo"});$("#relGrafico").after(eixo);
+  eixo.innerHTML=movs.length?'<span>'+rot(grupos[0])+'</span><span>maior barra: '+peso(max)+'</span><span>'+rot(grupos[grupos.length-1])+'</span>':"";
+  /* por farinha */
+  const sal=saldos();const ids=[...new Set(movs.map(m=>m.produtoId))];
+  const linhas=ids.map(id=>{const p=prod(id);const e=ent.filter(m=>m.produtoId===id),sa=sai.filter(m=>m.produtoId===id);
+    const v=soma(sa,m=>m.valor),c=soma(sa,custoSaida);return{nome:p.nome||"(farinha removida)",gE:soma(e,m=>m.gramas),gS:soma(sa,m=>m.gramas),v,c,l:v-c,sal:sal[id]||0};}).sort((a,b)=>b.v-a.v||a.nome.localeCompare(b.nome,"pt-BR"));
+  $("#relProdutos").innerHTML=linhas.length?linhas.map(r=>'<tr><td>'+esc(r.nome)+'</td><td class="r num">'+peso(r.gE)+'</td><td class="r num">'+peso(r.gS)+'</td><td class="r num">'+brl(r.v)+'</td><td class="r num">'+brl(r.c)+'</td><td class="r num" style="color:'+(r.l<0?"var(--bad)":"var(--in)")+'">'+brl(r.l)+'</td><td class="r num">'+(r.v?pct(r.l/r.v*100):"—")+'</td><td class="r num">'+peso(r.sal)+'</td></tr>').join("")
+    :'<tr><td colspan="8"><div class="empty">Nenhuma farinha movimentada no período.</div></td></tr>';
+  /* financeiro */
+  const c=S.contas,h=hoje();
+  const recebido=soma(c.filter(x=>x.tipo==="receber"&&x.pago&&dentro(x.pagoEm)),x=>x.valor);
+  const pago=soma(c.filter(x=>x.tipo==="pagar"&&x.pago&&dentro(x.pagoEm)),x=>x.valor);
+  const abR=c.filter(x=>x.tipo==="receber"&&!x.pago&&dentro(x.vencimento)),abP=c.filter(x=>x.tipo==="pagar"&&!x.pago&&dentro(x.vencimento));
+  const venR=abR.filter(x=>x.vencimento<h),venP=abP.filter(x=>x.vencimento<h);
+  const saldoCx=recebido-pago;
+  const lf=(t,v,cor,sub)=>'<tr><td>'+t+(sub?'<span class="sub">'+sub+'</span>':'')+'</td><td class="r num"'+(cor?' style="color:'+cor+'"':'')+'>'+v+'</td></tr>';
+  $("#relFin").innerHTML=lf("Recebido",brl(recebido),"var(--in)")+lf("Pago",brl(pago),"var(--out)")+
+    lf("<b>Saldo (recebido − pago)</b>","<b>"+brl(saldoCx)+"</b>",saldoCx<0?"var(--bad)":"var(--in)")+
+    lf("A receber em aberto",brl(soma(abR,x=>x.valor)),"",abR.length+" conta"+(abR.length===1?"":"s")+(venR.length?" · "+venR.length+" vencida"+(venR.length>1?"s":"")+" ("+brl(soma(venR,x=>x.valor))+")":""))+
+    lf("A pagar em aberto",brl(soma(abP,x=>x.valor)),"",abP.length+" conta"+(abP.length===1?"":"s")+(venP.length?" · "+venP.length+" vencida"+(venP.length>1?"s":"")+" ("+brl(soma(venP,x=>x.valor))+")":""));
+  /* ranking de clientes e fornecedores */
+  const rank=(lista,vazio)=>{const g={};lista.forEach(m=>{const n=(m.pessoa||"").trim()||vazio;g[n]=g[n]||{g:0,v:0};g[n].g+=m.gramas||0;g[n].v+=m.valor||0;});
+    const r=Object.entries(g).sort((a,b)=>b[1].v-a[1].v||b[1].g-a[1].g).slice(0,8);
+    return r.length?r.map(([n,x])=>'<tr><td>'+esc(n)+'</td><td class="r num">'+peso(x.g)+'</td><td class="r num">'+brl(x.v)+'</td></tr>').join(""):'<tr><td colspan="3"><div class="empty">Nada no período.</div></td></tr>';};
+  $("#relClientes").innerHTML=rank(sai,"(sem nome)");
+  $("#relFornecedores").innerHTML=rank(ent,"(sem nome)");
+  labelCells();
+}
+$("#tabs").addEventListener("click",()=>{if(S.tab==="relatorios")renderRelatorios();});
+
 /* ---------- versões do sistema ---------- */
-const VERSAO="1.12.2";
+const VERSAO="1.13.0";
 const HISTORICO=[
+  {v:"1.13.0",d:"2026-10-28",n:["Nova aba Relatórios: resumo do período, gráfico de entradas e saídas, vendas e lucro por farinha, financeiro e maiores clientes e fornecedores.","Períodos: este mês, mês passado, últimos 30 dias, este ano ou datas escolhidas."]},
   {v:"1.12.2",d:"2026-10-28",n:["O botão Atualizar sistema também manda o Render publicar (Deploy Hook), sem precisar abrir o Render."]},
   {v:"1.12.1",d:"2026-10-28",n:["Acompanhante agora vê só o chat (Mensagens e Configurações), sem estoque nem contas.","O antigo tipo Só mensagens foi unido ao Acompanhante."]},
   {v:"1.12.0",d:"2026-10-28",n:["Atualizar o sistema pela própria tela: Configurações > Atualizar sistema (administrador).","Na internet os arquivos vão sozinhos para o GitHub e o site se atualiza; no computador da loja o sistema instala e reinicia.","Arquivos com erro são recusados antes de mexer em qualquer coisa."]},
@@ -971,6 +1114,7 @@ function render(){
   /* banner de exemplos */
   labelCells();
   const hasEx=S.produtos.some(x=>x.exemplo)||S.movimentos.some(x=>x.exemplo)||S.contas.some(x=>x.exemplo);$("#exBanner").hidden=!hasEx;
+  if(typeof renderRelatorios==="function")renderRelatorios();
 }
 
 /* ---------- início ---------- */
