@@ -10,7 +10,7 @@ const path = require("path");
 const crypto = require("crypto");
 const os = require("os");
 
-const VERSAO = "1.12.0";
+const VERSAO = "1.12.1";
 const PORTA = Number(process.env.PORTA || process.env.PORT || 3000);
 const PASTA_DADOS = path.join(__dirname, "dados");
 const ARQ_BANCO = path.join(PASTA_DADOS, "banco.json");
@@ -20,8 +20,11 @@ const PAGINA = path.join(__dirname, "public", "index.html");
 // Mensagens são temporárias: somem 24 horas depois de enviadas
 const VALIDADE_MSG = 24 * 60 * 60 * 1000;
 const COLECOES = ["produtos", "movimentos", "contas", "mensagens"];
-const PAPEIS = ["admin", "operador", "acompanhante", "mensagens"];
-// "mensagens": só usa o chat; não recebe nenhum dado de estoque ou financeiro
+const PAPEIS = ["admin", "operador", "acompanhante"];
+// "acompanhante": só usa o chat; não recebe nenhum dado de estoque ou financeiro
+// (o antigo tipo "mensagens" virou "acompanhante")
+const SO_CHAT = papel => papel === "acompanhante" || papel === "mensagens";
+const normPapel = papel => papel === "mensagens" ? "acompanhante" : papel;
 // Quem pode lançar dados de estoque e financeiro
 const PODE_LANCAR = ["admin", "operador"];
 
@@ -290,7 +293,7 @@ async function api(req, res, url) {
     if (rev === banco.rev) return responder(res, 200, { rev: banco.rev, igual: true, versao: VERSAO });
     return responder(res, 200, {
       rev: banco.rev, versao: VERSAO,
-      ...(eu.papel === "mensagens"
+      ...(SO_CHAT(eu.papel)
         ? { produtos: [], movimentos: [], contas: [] }
         : { produtos: Object.values(banco.produtos), movimentos: Object.values(banco.movimentos), contas: Object.values(banco.contas) }),
       mensagens: listaMensagens(eu),
@@ -338,10 +341,10 @@ async function api(req, res, url) {
       const login = String(b.usuario || "").trim().toLowerCase();
       if (!/^[a-z0-9._-]{2,30}$/.test(login)) return erro(res, 400, "Usuário deve ter de 2 a 30 letras, números, ponto ou traço, sem espaços.");
       if (Object.values(banco.usuarios).some(u => u.usuario === login)) return erro(res, 400, "Já existe um usuário com esse login.");
-      if (!PAPEIS.includes(b.papel)) return erro(res, 400, "Escolha o tipo de acesso.");
+      if (!PAPEIS.includes(normPapel(b.papel))) return erro(res, 400, "Escolha o tipo de acesso.");
       if (String(b.senha || "").length < 4) return erro(res, 400, "A senha precisa ter pelo menos 4 caracteres.");
       const nid = novoId(), salt = crypto.randomBytes(16).toString("hex");
-      banco.usuarios[nid] = { id: nid, usuario: login, nome: String(b.nome || login).trim().slice(0, 60), papel: b.papel, salt, hash: hashSenha(b.senha, salt), trocarSenha: true, criadoEm: Date.now() };
+      banco.usuarios[nid] = { id: nid, usuario: login, nome: String(b.nome || login).trim().slice(0, 60), papel: normPapel(b.papel), salt, hash: hashSenha(b.senha, salt), trocarSenha: true, criadoEm: Date.now() };
       salvar();
       return responder(res, 200, { usuario: publico(banco.usuarios[nid]) });
     }
@@ -351,9 +354,9 @@ async function api(req, res, url) {
     if (metodo === "PATCH") {
       const b = await lerCorpo(req);
       if (b.papel !== undefined) {
-        if (!PAPEIS.includes(b.papel)) return erro(res, 400, "Tipo de acesso inválido.");
-        if (alvo.papel === "admin" && b.papel !== "admin" && admins.length === 1) return erro(res, 400, "O sistema precisa de pelo menos um administrador.");
-        alvo.papel = b.papel;
+        if (!PAPEIS.includes(normPapel(b.papel))) return erro(res, 400, "Tipo de acesso inválido.");
+        if (alvo.papel === "admin" && normPapel(b.papel) !== "admin" && admins.length === 1) return erro(res, 400, "O sistema precisa de pelo menos um administrador.");
+        alvo.papel = normPapel(b.papel);
       }
       if (b.nome !== undefined) alvo.nome = String(b.nome).trim().slice(0, 60) || alvo.usuario;
       if (b.senha !== undefined) {
@@ -462,6 +465,8 @@ async function iniciar() {
   }
   if (!banco) banco = bancoVazio();
   for (const k of Object.keys(bancoVazio())) if (banco[k] === undefined) banco[k] = bancoVazio()[k];
+  // usuários do antigo tipo "Só mensagens" passam a ser Acompanhante (mesmo acesso: só o chat)
+  for (const u of Object.values(banco.usuarios)) if (u.papel === "mensagens") u.papel = "acompanhante";
   // Primeiro uso: cria o administrador. Na internet, use a variável SENHA_ADMIN_INICIAL.
   if (!Object.keys(banco.usuarios).length) {
     const id = novoId(), salt = crypto.randomBytes(16).toString("hex");

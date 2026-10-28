@@ -493,8 +493,7 @@ nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:v
           <label>Senha inicial<input id="uSenha" type="text" required placeholder="Mínimo 4 caracteres"></label>
           <label>Tipo de acesso<select id="uPapel">
             <option value="operador">Operador: lança estoque e contas</option>
-            <option value="acompanhante">Acompanhante: vê TODO o sistema, sem alterar nada</option>
-            <option value="mensagens">Só mensagens: NÃO vê estoque nem contas, só conversa</option>
+            <option value="acompanhante">Acompanhante: só usa o chat (não vê estoque nem contas)</option>
             <option value="admin">Administrador: tudo + usuários</option>
           </select></label>
           <p class="hint" id="uPapelHint"></p>
@@ -768,8 +767,8 @@ $("#clearEx").addEventListener("click",async()=>{const b=$("#clearEx");if(S.arme
 
 /* ---------- mensagens: canal Geral + conversas privadas ---------- */
 let meuId=null,msgs=[],nomes={},pessoas=[],chatArmed=null,conversa="geral";
-const PAPEL_CURTO={admin:"Administrador",operador:"Operador",acompanhante:"Acompanhante",mensagens:"Só mensagens"};
-const PAPEL_COR={admin:"bad",operador:"in",acompanhante:"open",mensagens:"ex"};
+const PAPEL_CURTO={admin:"Administrador",operador:"Operador",acompanhante:"Acompanhante",mensagens:"Acompanhante"};
+const PAPEL_COR={admin:"bad",operador:"in",acompanhante:"open",mensagens:"open"};
 try{const c=localStorage.getItem("farinha.conversa");if(c)conversa=c;}catch(e){}
 // a qual conversa a mensagem pertence, do ponto de vista de quem está logado
 const convDe=m=>!m.para?"geral":(m.autor===meuId?m.para:m.autor);
@@ -870,8 +869,9 @@ if("serviceWorker" in navigator&&window.isSecureContext){navigator.serviceWorker
 renderNotif();
 
 /* ---------- versões do sistema ---------- */
-const VERSAO="1.12.0";
+const VERSAO="1.12.1";
 const HISTORICO=[
+  {v:"1.12.1",d:"2026-10-28",n:["Acompanhante agora vê só o chat (Mensagens e Configurações), sem estoque nem contas.","O antigo tipo Só mensagens foi unido ao Acompanhante."]},
   {v:"1.12.0",d:"2026-10-28",n:["Atualizar o sistema pela própria tela: Configurações > Atualizar sistema (administrador).","Na internet os arquivos vão sozinhos para o GitHub e o site se atualiza; no computador da loja o sistema instala e reinicia.","Arquivos com erro são recusados antes de mexer em qualquer coisa."]},
   {v:"1.11.0",d:"2026-10-27",n:["Nova aba Configurações: escolha entre 3 skins (Raio, Roda e Selo) e o modo claro, escuro ou automático.","A skin fica salva no usuário e vale em todos os aparelhos.","Trocar senha agora fica em Configurações."]},
   {v:"1.10.1",d:"2026-10-25",n:["Servidor encontra as telas mesmo se os arquivos forem enviados fora da pasta public."]},
@@ -1021,13 +1021,13 @@ $("#atuForm").addEventListener("submit",async e=>{e.preventDefault();const b=$("
   b.textContent="Enviar atualização";});
 
 /* ---------- login, usuários e senha ---------- */
-const NOME_PAPEL={admin:"Administrador",operador:"Operador",acompanhante:"Acompanhante",mensagens:"Só mensagens"};
+const NOME_PAPEL={admin:"Administrador",operador:"Operador",acompanhante:"Acompanhante"};
 function mostrarLogin(msg){$("#loginTela").hidden=false;$("#userBox").hidden=true;const e=$("#lErr");e.hidden=!msg;e.textContent=msg||"";setTimeout(()=>$("#lUser").focus(),50);}
 function entrar(u){EU=u;meuId=u.id;store=api;$("#loginTela").hidden=true;
   $("#userBox").hidden=false;$("#userNome").textContent=u.nome;$("#cfgNome").textContent=u.nome;$("#cfgLogin").textContent="Login: "+u.usuario+" · "+(NOME_PAPEL[u.papel]||u.papel);
   if(u.skin||u.modo)aplicarTema(u.skin,u.modo);$("#userPapel").textContent=NOME_PAPEL[u.papel]||u.papel;
   setRO(!["admin","operador"].includes(u.papel));$("#tabUsuarios").hidden=u.papel!=="admin";
-  document.body.classList.toggle("so-chat",u.papel==="mensagens");$("#roBadge").textContent=u.papel==="mensagens"?"Só mensagens":"Somente leitura";if(u.papel==="mensagens")setTab("chat");
+  const soChat=u.papel==="acompanhante"||u.papel==="mensagens";document.body.classList.toggle("so-chat",soChat);$("#roBadge").textContent=soChat?"Só chat":"Somente leitura";if(soChat)setTab("chat");
   if(u.papel!=="admin"&&S.tab==="usuarios")setTab("painel");
   if(u.trocarSenha)abrirSenha(true);
   rev=0;sincronizar(true);clearInterval(poll);let ultimaSync=0;poll=setInterval(()=>{if(!document.hidden||Date.now()-ultimaSync>9000){ultimaSync=Date.now();sincronizar();}},3000);
@@ -1052,7 +1052,7 @@ $("#senhaForm").addEventListener("submit",async e=>{e.preventDefault();const er=
   catch(x){er.textContent=x.msg||"Não foi possível trocar a senha.";er.hidden=false;}});
 
 /* usuários (administrador) */
-const DESC_PAPEL={operador:"Lança estoque, entradas, saídas e contas, e usa as mensagens.",acompanhante:"Vê o painel, o estoque, as movimentações e as contas, mas não altera nada. Usa as mensagens.",mensagens:"Vê somente a aba Mensagens (e Configurações). Não vê estoque nem financeiro.",admin:"Faz tudo, inclusive criar e alterar usuários."};
+const DESC_PAPEL={operador:"Lança estoque, entradas, saídas e contas, e usa as mensagens.",acompanhante:"Vê somente Mensagens e Configurações. Não vê estoque, movimentações nem contas.",admin:"Faz tudo, inclusive criar e alterar usuários."};
 function papelHint(){$("#uPapelHint").textContent=DESC_PAPEL[$("#uPapel").value]||"";}
 $("#uPapel").addEventListener("change",papelHint);papelHint();
 let usuarios=[],uArmed=null;

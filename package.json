@@ -1,6 +1,6 @@
 {
   "name": "moinho-raios-controle-farinha",
-  "version": "1.12.0",
+  "version": "1.12.1",
   "private": true,
   "description": "Moinho Raios - controle de estoque de farinha (g/kg), contas e mensagens",
   "main": "server.js",
