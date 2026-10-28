@@ -869,8 +869,9 @@ if("serviceWorker" in navigator&&window.isSecureContext){navigator.serviceWorker
 renderNotif();
 
 /* ---------- versões do sistema ---------- */
-const VERSAO="1.12.1";
+const VERSAO="1.12.2";
 const HISTORICO=[
+  {v:"1.12.2",d:"2026-10-28",n:["O botão Atualizar sistema também manda o Render publicar (Deploy Hook), sem precisar abrir o Render."]},
   {v:"1.12.1",d:"2026-10-28",n:["Acompanhante agora vê só o chat (Mensagens e Configurações), sem estoque nem contas.","O antigo tipo Só mensagens foi unido ao Acompanhante."]},
   {v:"1.12.0",d:"2026-10-28",n:["Atualizar o sistema pela própria tela: Configurações > Atualizar sistema (administrador).","Na internet os arquivos vão sozinhos para o GitHub e o site se atualiza; no computador da loja o sistema instala e reinicia.","Arquivos com erro são recusados antes de mexer em qualquer coisa."]},
   {v:"1.11.0",d:"2026-10-27",n:["Nova aba Configurações: escolha entre 3 skins (Raio, Roda e Selo) e o modo claro, escuro ou automático.","A skin fica salva no usuário e vale em todos os aparelhos.","Trocar senha agora fica em Configurações."]},
@@ -997,7 +998,7 @@ let atuInfo=null,atuArquivos=[];
 async function carregarAtualizacao(){const box=$("#painelAtualizacao");if(!EU||EU.papel!=="admin"){box.hidden=true;return;}
   box.hidden=false;try{atuInfo=await req("GET","/api/atualizacao");}catch(e){$("#atuStatus").textContent="Não foi possível verificar.";return;}
   const st=$("#atuStatus");
-  if(atuInfo.modo==="github")st.textContent="Versão atual "+atuInfo.versao+". Os arquivos são enviados ao GitHub ("+atuInfo.repo+") e o site se atualiza sozinho em 2 a 3 minutos.";
+  if(atuInfo.modo==="github")st.textContent="Versão atual "+atuInfo.versao+". Os arquivos são enviados ao GitHub ("+atuInfo.repo+")"+(atuInfo.hook?" e o Render publica sozinho em 2 a 3 minutos.":". Falta configurar RENDER_DEPLOY_HOOK no Render; sem ele, depois do envio clique em Manual Deploy no Render.");
   else if(atuInfo.modo==="local")st.textContent="Versão atual "+atuInfo.versao+". Os arquivos são instalados neste computador e o sistema reinicia sozinho (a versão anterior fica guardada em dados/versoes-antigas).";
   else st.textContent="Para atualizar por aqui, configure no Render as variáveis GITHUB_TOKEN e GITHUB_REPO (veja PUBLICAR-NA-INTERNET.txt).";
   $("#atuForm").hidden=atuInfo.modo==="indisponivel";}
@@ -1013,7 +1014,8 @@ $("#atuForm").addEventListener("submit",async e=>{e.preventDefault();const b=$("
   try{const arquivos=[];for(const f of atuArquivos)arquivos.push({nome:f.name,base64:await lerBase64(f)});
     const j=await req("POST","/api/atualizacao",{arquivos});
     const ok=$("#atuOk");ok.hidden=false;
-    ok.textContent=j.modo==="github"?"Atualização enviada"+(j.versao?" (versão "+j.versao+")":"")+". O site vai se atualizar sozinho em 2 a 3 minutos. Depois disso, todos verão o aviso Atualizar agora."
+    ok.textContent=j.modo==="github"?(j.publicando?"Atualização enviada"+(j.versao?" (versão "+j.versao+")":"")+" e o Render já está publicando. Em 2 a 3 minutos todos verão o aviso Atualizar agora."
+        :"Atualização enviada ao GitHub"+(j.versao?" (versão "+j.versao+")":"")+". Agora abra o Render e clique em Manual Deploy → Deploy latest commit.")
       :"Atualização instalada"+(j.versao?" (versão "+j.versao+")":"")+". O sistema está reiniciando; a página recarrega em alguns segundos.";
     $("#atuArq").value="";atuArquivos=[];$("#atuLista").innerHTML="";
     if(j.modo==="local")setTimeout(()=>location.reload(),6000);}

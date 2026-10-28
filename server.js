@@ -10,7 +10,7 @@ const path = require("path");
 const crypto = require("crypto");
 const os = require("os");
 
-const VERSAO = "1.12.1";
+const VERSAO = "1.12.2";
 const PORTA = Number(process.env.PORTA || process.env.PORT || 3000);
 const PASTA_DADOS = path.join(__dirname, "dados");
 const ARQ_BANCO = path.join(PASTA_DADOS, "banco.json");
@@ -160,6 +160,12 @@ const vm = require("vm");
 const ARQUIVOS_PERMITIDOS = ["server.js", "package.json", "index.html", "sw.js", "manifest.json", "icone.svg", "icone-180.png", "icone-512.png", "LEIA-ME.txt", "PUBLICAR-NA-INTERNET.txt", "iniciar.bat", "iniciar.sh", "liberar-firewall.bat", "tunel.bat"];
 const NA_PASTA_PUBLIC = ["index.html", "sw.js", "manifest.json", "icone.svg", "icone-180.png", "icone-512.png"];
 const GH = { token: process.env.GITHUB_TOKEN || "", repo: process.env.GITHUB_REPO || "", branch: process.env.GITHUB_BRANCH || "main" };
+// Deploy Hook do Render (Settings > Deploy > Deploy Hook): manda o Render publicar logo depois do envio ao GitHub
+const DEPLOY_HOOK = process.env.RENDER_DEPLOY_HOOK || "";
+async function chamarDeployHook() {
+  if (!DEPLOY_HOOK) return false;
+  try { const r = await fetch(DEPLOY_HOOK, { method: "POST" }); return r.ok; } catch (e) { console.error("Deploy Hook falhou:", e.message); return false; }
+}
 function modoAtualizacao() { return GH.token && GH.repo ? "github" : NUVEM ? "indisponivel" : "local"; }
 // onde o arquivo mora: se o servidor achou em public/, continua em public/; senão, na pasta principal
 function caminhoDoArquivo(nome) {
@@ -304,7 +310,7 @@ async function api(req, res, url) {
   /* --- atualização do sistema (só administrador) --- */
   if (p === "/api/atualizacao" && metodo === "GET") {
     if (eu.papel !== "admin") return erro(res, 403, "Só o administrador atualiza o sistema.");
-    return responder(res, 200, { modo: modoAtualizacao(), repo: GH.repo, branch: GH.branch, versao: VERSAO, permitidos: ARQUIVOS_PERMITIDOS });
+    return responder(res, 200, { modo: modoAtualizacao(), repo: GH.repo, branch: GH.branch, versao: VERSAO, permitidos: ARQUIVOS_PERMITIDOS, hook: !!DEPLOY_HOOK });
   }
   if (p === "/api/atualizacao" && metodo === "POST") {
     if (eu.papel !== "admin") return erro(res, 403, "Só o administrador atualiza o sistema.");
@@ -316,8 +322,9 @@ async function api(req, res, url) {
     try {
       if (modo === "github") {
         const commit = await enviarParaGitHub(arquivos, eu.nome);
-        console.log("Atualização enviada ao GitHub por " + eu.nome + ": " + commit);
-        return responder(res, 200, { ok: true, modo, commit, versao: novaVersao, arquivos: arquivos.map(a => a.caminho) });
+        const publicando = await chamarDeployHook();
+        console.log("Atualização enviada ao GitHub por " + eu.nome + ": " + commit + (publicando ? " · Render avisado pelo Deploy Hook" : ""));
+        return responder(res, 200, { ok: true, modo, commit, publicando, hook: !!DEPLOY_HOOK, versao: novaVersao, arquivos: arquivos.map(a => a.caminho) });
       }
       const pasta = gravarLocal(arquivos);
       console.log("\n  Atualização instalada por " + eu.nome + ". Versão anterior guardada em: " + pasta + "\n  Reiniciando...\n");
